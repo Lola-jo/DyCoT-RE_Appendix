@@ -1,0 +1,133 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. 
+% If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{multirow}
+
+\DeclareRobustCommand*{\IEEEauthorrefmark}[1]{%
+    \raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{#1}}}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Dual-Dynamic Optimization for RL Reward Functions: \\ Synergistic Temperature Regulation and Model Selection}
+
+
+\author{
+\IEEEauthorblockN{1\textsuperscript{st} Xinning Zhu}
+\IEEEauthorblockA{\textit{Sino-European School of Technology} \\
+\textit{Shanghai University}\\
+Shanghai, China \\
+zhuxinning@shu.edu.cn}
+~\\
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Jinxin Du}
+\IEEEauthorblockA{\textit{Sino-European School of Technology} \\
+\textit{Shanghai University}\\
+Shanghai, China \\
+jinxin\_du@shu.edu.cn}
+~\\
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Qiongying Fu}
+\IEEEauthorblockA{\textit{Sino-European School of Technology} \\
+\textit{Shanghai University}\\
+Shanghai, China \\
+fqiongying@163.com}
+~\\
+\and
+\IEEEauthorblockN{4\textsuperscript{th} Lunde Chen*}
+\IEEEauthorblockA{\textit{Sino-European School of Technology} \\
+\textit{Shanghai University}\\
+Shanghai, China \\
+lundechen@shu.edu.cn}
+*Corresponding author
+}
+
+\maketitle
+
+\begin{abstract}
+Chain-of-Thought (CoT) reasoning methods hold great potential in automating reward function design for reinforcement learning (RL), especially when combined with large language models (LLMs). However, existing CoT-based frameworks often rely on static configurations, limiting their adaptability in dynamic or complex environments. This paper presents an adaptive CoT reward generation framework that incorporates two optimization mechanisms: Dynamic Temperature Regulation via Optimization (DTRO) and Dynamic Model Selection for Reward Optimization (DMSRO). The proposed system demonstrates superior adaptability, learning stability, and sample efficiency across various standard and custom RL environments.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Reinforcement learning, reward engineering, large language models, chain-of-thought reasoning, dynamic temperature adjustment, model selection
+\end{IEEEkeywords}
+
+\section{Introduction}
+Reinforcement learning (RL) has achieved remarkable success in domains such as game playing \cite{mnih2015human}, robotic control \cite{finn2016guided}, and collaborative behavior modeling \cite{baker2019emergent}. Yet, the design of effective and generalizable reward functions remains a fundamental challenge, often relying on manual engineering \cite{ng1999policy, arora2021survey}.
+
+The emergence of large language models (LLMs) \cite{brown2020language, ouyang2022training, achiam2023gpt} and their reasoning capabilities, particularly through Chain-of-Thought (CoT) prompting \cite{kojima2022large, dua2022, wang2023e}, has opened new opportunities for reward function automation. Nevertheless, most CoT-based methods adopt fixed model configurations and static sampling parameters, which hampers their adaptability in evolving RL environments.
+
+In this work, we address this gap by proposing an adaptive optimization framework that enhances CoT-based reward generation with two dynamic mechanisms: temperature regulation (DTRO) and model selection (DMSRO). This approach enables runtime adaptability and better exploration-exploitation tradeoffs.
+
+\section{Related Work}
+Traditional reward engineering methods, including reward shaping \cite{sutton1998reinforcement, hu2020learning} and inverse reinforcement learning \cite{ziebart2008maximum}, offer theoretical foundations but lack scalability. Recent LLM-based systems such as EUREKA \cite{ma2023eureka} and Text2Reward \cite{xie2023text2reward} leverage natural language but typically operate under static configurations. Chain-of-Thought prompting enhances reasoning capabilities \cite{wang2023c, madaan2023}, while temperature control \cite{zhu2024hot, cecere2025monte, zhang2024edt} and model adaptation \cite{hsieh2023distilling, vardhni2024performance} remain underexplored in reward generation.
+
+\section{Methodology}
+The proposed framework models reward generation as a function of task description, temperature, and model:
+\begin{equation}
+R(s,a,t) = \Phi(d, T(t), m(t))
+\end{equation}
+where $\Phi$ denotes the CoT-based LLM generation process.
+
+\subsection{Dynamic Temperature Regulation (DTRO)}
+DTRO regulates the LLM sampling temperature based on policy entropy $H_t$ and confidence $C_t$. The update rule is:
+\begin{equation}
+\Delta T_t = \beta \Delta T_{t-1} + (1-\beta) \left[\alpha_1 \tanh\left(\frac{H_t - \bar{H}}{\sigma_H}\right) + \alpha_2(C_t - \theta_c)\right]
+\end{equation}
+This mechanism adapts the creativity and determinism of LLM outputs according to policy performance.
+
+\subsection{Dynamic Model Selection (DMSRO)}
+Let $\mathcal{M}$ be a set of candidate models. The selection score for model $m$ is:
+\begin{equation}
+p_{\text{fused}}(m) = (1-\gamma) \cdot p_{\text{local}}(m) + \gamma \cdot p_{\text{hist}}(m)
+\end{equation}
+An $\epsilon$-greedy strategy is applied to explore new models while exploiting high-performing ones.
+
+\section{Experiments}
+Experiments are conducted on four OpenAI Gym-style environments and a custom single-agent mining task. Each trial logs reward, convergence iterations, and stability.
+
+\begin{table}[!ht]
+\caption{Comparison of LLMs on Reward Generation Performance}
+\centering
+\begin{tabular}{l|cccc}
+\hline
+Model & Avg. Reward & Max & Min & Std. Dev. \\
+\hline
+LLaMA3.1 & 208.6 & 312.4 & -33.7 & 139.5 \\
+Qwen2.5 & 202.5 & 316.3 & -41.6 & 138.9 \\
+Gemma3 & 121.6 & 305.4 & -34.2 & 140.0 \\
+Deepseek-R1 & 61.2 & 318.2 & -96.2 & 150.3 \\
+\hline
+\end{tabular}
+\label{tab:llms}
+\end{table}
+
+% \begin{figure}[!ht]
+% \centering
+% \includegraphics[width=0.9\linewidth]{temperature_correlation.pdf}
+% \caption{Reward–temperature correlation in CartPole (DTRO active)}
+% \label{fig:temp_corr}
+% \end{figure}
+
+\section{Discussion}
+While our method improves reward adaptability and task generalization, limitations persist in model switching costs and reward interpretability. Future efforts may include structured prompting \cite{chen2022, gao2023}, hybrid reward learning \cite{skalse2022defining}, and MoE architecture integration.
+
+\section{Conclusion}
+We propose a dual-dynamic optimization framework for CoT-based RL reward generation, incorporating temperature regulation and model selection. Our results demonstrate improved convergence, stability, and reward quality across tasks, laying a foundation for scalable, self-adaptive reward engineering.
+
+\bibliographystyle{IEEEtran} % 或其他你需要的样式
+\bibliography{adaptive_cot_reward_rl} % 不需要加.bib扩展名
+
+\end{document}
