@@ -106,8 +106,8 @@ P_{t+1} = \underbrace{\text{Select}(P_t, k=0.2)}_{\text{Elite selection}} \oplus
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{./Figures/evolution.png}
-\caption{Reward function design framework. Top: Natural language task specification and environment interface. Middle: Chain-of-Thought reasoning (left) and dynamic optimization modules (right). Bottom: Executable output and monitoring system.}
-\label{fig:architecture}
+\caption{Evolutionary search loop for reward optimization. The process iteratively refines reward functions through parallel RL training, with fitness evaluation driving selection and mutation.}
+\label{fig:evolution}
 \end{figure}
 
 The DTRO module regulates exploration-exploitation balance via entropy-aware temperature adjustment:
