@@ -74,13 +74,61 @@ In this work, we address this gap by proposing an adaptive optimization framewor
 \section{Related Work}
 Traditional reward engineering methods, including reward shaping \cite{sutton1998reinforcement, hu2020learning} and inverse reinforcement learning \cite{ziebart2008maximum}, offer theoretical foundations but lack scalability. Recent LLM-based systems such as EUREKA \cite{ma2023eureka} and Text2Reward \cite{xie2023text2reward} leverage natural language but typically operate under static configurations. Chain-of-Thought prompting enhances reasoning capabilities \cite{wang2023c, madaan2023}, while temperature control \cite{zhu2024hot, cecere2025monte, zhang2024edt} and model adaptation \cite{hsieh2023distilling, vardhni2024performance} remain underexplored in reward generation.
 
-\begin{figure*}[ht]
-    \centering
-    \includegraphics[width=0.95\textwidth]{./Figures/reward_episode_curve.png}
-    \caption{Average reward over training episodes in five environments. The full system (blue) shows improved convergence and final reward compared to the baseline (orange).}
-    \label{fig:reward-episode}
-\end{figure*}
+
+
 \section{Methodology}
+\subsection{Architecture Overview}
+The proposed framework combines evolutionary search with dynamic reward optimization, as illustrated in Fig.~\ref{fig:architecture} and Fig.~\ref{fig:evolution}. The system processes natural language inputs (e.g., "Design a reward function for stable bipedal robot walking") through a dual-path mechanism:
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{./Figures/architecture.png}
+\caption{Reward function design framework. Top: Natural language task specification and environment interface. Middle: Chain-of-Thought reasoning (left) and dynamic optimization modules (right). Bottom: Executable output and monitoring system.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Chain-of-Thought Generation}
+The left branch in Fig.~\ref{fig:architecture} demonstrates the three-stage decomposition process:
+\begin{equation}
+\text{CoT}(d) \rightarrow \begin{cases}
+\text{Decompose goal} & \text{(e.g., balance, forward motion)} \\
+\text{Identify key states} & \text{(e.g., torso angle $\theta$)} \\
+\text{Mathematical modeling} & \text{(e.g., $r_t = w_1\cos\theta + w_2v_x$)}
+\end{cases}
+\end{equation}
+
+\subsection{Dynamic Optimization}
+The evolutionary loop in Fig.~\ref{fig:evolution} operates through:
+\begin{equation}
+P_{t+1} = \underbrace{\text{Select}(P_t, k=0.2)}_{\text{Elite selection}} \oplus \underbrace{\text{Mutate}(\theta, T)}_{\substack{\text{Temperature-}\\ \text{controlled}}}
+\end{equation}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{./Figures/evolution.png}
+\caption{Reward function design framework. Top: Natural language task specification and environment interface. Middle: Chain-of-Thought reasoning (left) and dynamic optimization modules (right). Bottom: Executable output and monitoring system.}
+\label{fig:architecture}
+\end{figure}
+
+The DTRO module regulates exploration-exploitation balance via entropy-aware temperature adjustment:
+\begin{equation}
+\Delta T = \beta \frac{\partial H}{\partial t} \cdot \mathbb{I}(\sigma_R > \tau)
+\end{equation}
+
+where $\mathbb{I}(\cdot)$ is the indicator function. The DMSRO component, shown in the right branch of Fig.~\ref{fig:architecture}, optimizes model selection through:
+\begin{equation}
+m^* = \mathop{\mathrm{arg\,max}}\limits_{m \in \mathcal{M}} \left( \alpha \cdot \text{Score}(m) + (1-\alpha)\cdot \text{Efficiency}(m) \right)
+\end{equation}
+
+\subsection{Integration Mechanism}
+The two diagrams collectively demonstrate how initial CoT-generated rewards evolve through:
+\begin{itemize}
+\item Continuous refinement via the evolutionary loop (Fig.~\ref{fig:evolution})
+\item Real-time adaptation through dynamic modules (Fig.~\ref{fig:architecture})
+\end{itemize}
+
+The fitness function $F=0.4S+0.3C+0.3E$ in Fig.~\ref{fig:evolution} ensures balanced optimization of stability ($S$), completion ($C$), and efficiency ($E$).
+
 The proposed framework models reward generation as a function of task description, temperature, and model:
 \begin{equation}
 R(s,a,t) = \Phi(d, T(t), m(t))
@@ -93,6 +141,13 @@ DTRO regulates the LLM sampling temperature based on policy entropy $H_t$ and co
 \Delta T_t = \beta \Delta T_{t-1} + (1-\beta) \left[\alpha_1 \tanh\left(\frac{H_t - \bar{H}}{\sigma_H}\right) + \alpha_2(C_t - \theta_c)\right]
 \end{equation}
 This mechanism adapts the creativity and determinism of LLM outputs according to policy performance.
+
+\begin{figure*}[ht]
+    \centering
+    \includegraphics[width=0.95\textwidth]{./Figures/reward_episode_curve.png}
+    \caption{Average reward over training episodes in five environments. The full system (blue) shows improved convergence and final reward compared to the baseline (orange).}
+    \label{fig:reward-episode}
+\end{figure*}
 
 \subsection{Dynamic Model Selection (DMSRO)}
 Let $\mathcal{M}$ be a set of candidate models. The selection score for model $m$ is:
