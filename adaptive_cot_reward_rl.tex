@@ -21,7 +21,7 @@
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
 
-\title{Dual-Dynamic Optimization for RL Reward Functions: \\ Synergistic Temperature Regulation and Model Selection}
+\title{Chain-of-Thought-Enhanced LLM Reward Engineering with Dual-Dynamic Optimization for Reinforcement Learning}
 
 
 \author{
@@ -39,14 +39,7 @@ Shanghai, China \\
 jinxin\_du@shu.edu.cn}
 ~\\
 \and
-\IEEEauthorblockN{3\textsuperscript{rd} Qiongying Fu}
-\IEEEauthorblockA{\textit{Sino-European School of Technology} \\
-\textit{Shanghai University}\\
-Shanghai, China \\
-fqiongying@163.com}
-~\\
-\and
-\IEEEauthorblockN{4\textsuperscript{th} Lunde Chen*}
+\IEEEauthorblockN{3\textsuperscript{th} Lunde Chen*}
 \IEEEauthorblockA{\textit{Sino-European School of Technology} \\
 \textit{Shanghai University}\\
 Shanghai, China \\
@@ -57,7 +50,11 @@ lundechen@shu.edu.cn}
 \maketitle
 
 \begin{abstract}
-Chain-of-Thought (CoT) reasoning methods hold great potential in automating reward function design for reinforcement learning (RL), especially when combined with large language models (LLMs). However, existing CoT-based frameworks often rely on static configurations, limiting their adaptability in dynamic or complex environments. This paper presents an adaptive CoT reward generation framework that incorporates two optimization mechanisms: Dynamic Temperature Regulation via Optimization (DTRO) and Dynamic Model Selection for Reward Optimization (DMSRO). The proposed system demonstrates superior adaptability, learning stability, and sample efficiency across various standard and custom RL environments.
+    Reward function design is critical for reinforcement learning (RL) agents, yet traditional approaches rely heavily on manual expertise, limiting adaptability to complex environments. This paper proposes a Chain-of-Thought (CoT)–based reward generation framework leveraging large language models (LLMs) for structured reasoning, combined with two adaptive optimization mechanisms: Dynamic Temperature Regulation Optimization (DTRO) and Dynamic Model Selection Routing Optimization (DMSRO).
+    The CoT framework transforms task descriptions into executable reward functions with improved interpretability and generalization. DTRO dynamically adjusts LLM sampling temperature based on policy entropy and performance feedback to balance exploration and stability. DMSRO integrates local reward evaluations with global training performance to dynamically select the optimal language model, enhancing sampling efficiency and robustness.
+    Experiments on CartPole, MountainCarContinuous, BipedalWalker, Ant, and the custom SpaceMining task demonstrate that the proposed method outperforms baseline and single-optimization approaches in average reward, convergence speed, and robustness. 
+    This work establishes a new paradigm for adaptive reward engineering in RL.
+
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -65,11 +62,24 @@ Reinforcement learning, reward engineering, large language models, chain-of-thou
 \end{IEEEkeywords}
 
 \section{Introduction}
-Reinforcement learning (RL) has achieved remarkable success in domains such as game playing \cite{mnih2015human}, robotic control \cite{finn2016guided}, and collaborative behavior modeling \cite{baker2019emergent}. Yet, the design of effective and generalizable reward functions remains a fundamental challenge, often relying on manual engineering \cite{ng1999policy, arora2021survey}.
 
-The emergence of large language models (LLMs) \cite{brown2020language, ouyang2022training, achiam2023gpt} and their reasoning capabilities, particularly through Chain-of-Thought (CoT) prompting \cite{kojima2022large, dua2022, wang2023e}, has opened new opportunities for reward function automation. Nevertheless, most CoT-based methods adopt fixed model configurations and static sampling parameters, which hampers their adaptability in evolving RL environments.
+Reward design remains one of the most critical and challenging aspects of reinforcement learning (RL). While well-shaped reward functions can significantly accelerate agent learning and improve task performance, traditional reward engineering heavily relies on manual expertise and extensive trial-and-error, often resulting in suboptimal generalization to new tasks or environments \cite{sutton1998reinforcement}. As RL tasks become increasingly complex and deployed in real-world scenarios with dynamic objectives, there is an urgent need for automated, interpretable, and adaptive reward design frameworks.
 
-In this work, we address this gap by proposing an adaptive optimization framework that enhances CoT-based reward generation with two dynamic mechanisms: temperature regulation (DTRO) and model selection (DMSRO). This approach enables runtime adaptability and better exploration-exploitation tradeoffs.
+Recent advances in large language models (LLMs) have demonstrated remarkable reasoning and generalization capabilities across domains \cite{brown2020language, ouyang2022training}. In particular, Chain-of-Thought (CoT) reasoning has emerged as a powerful paradigm that enables LLMs to decompose complex problems into structured intermediate steps, enhancing both interpretability and solution quality \cite{kojima2022large}. This structured reasoning ability makes CoT a promising approach for reward engineering, enabling the automatic generation of executable reward functions from high-level task descriptions with improved clarity and task alignment.
+
+However, CoT-based reward generation remains limited by static sampling parameters and fixed model configurations. Inspired by recent studies on dynamic temperature adjustment \cite{zhu2024hot} and model selection strategies \cite{hsieh2023distilling}, we hypothesize that integrating adaptive optimization mechanisms into the CoT reward generation pipeline can further enhance reward quality, policy stability, and sampling efficiency. Specifically, dynamically regulating the LLM sampling temperature can balance exploration versus determinism, while intelligently switching models can exploit their diverse reasoning and computational capabilities.
+
+In this work, we make the following contributions:
+
+Firstly, we propose a \textbf{Chain-of-Thought–based reward generation framework} that transforms natural language task descriptions into structured and executable reward functions, enhancing interpretability and generalization.
+
+Secondly, we design a \textbf{Dynamic Temperature Regulation Optimization (DTRO)} mechanism that monitors policy entropy and performance feedback to adaptively adjust sampling temperature, thereby balancing exploration stability trade-offs.
+
+Thirdly, we introduce a \textbf{Dynamic Model Selection Routing Optimization (DMSRO)} mechanism that integrates local reward evaluations with global training performance to dynamically select optimal LLMs, improving sampling efficiency and system robustness.
+
+Finally, we conduct extensive experiments across four standard RL environments—CartPole, MountainCarContinuous, BipedalWalker, and Ant—as well as a custom-designed SpaceMining task. Results demonstrate that our proposed framework outperforms baseline and single-optimization approaches in terms of average reward, convergence speed, resource efficiency, and policy robustness.
+
+The remainder of this paper is organized as follows. Section II reviews related work in reward engineering and CoT-based reasoning. Section III details our proposed methodology, including the CoT reward generation framework, DTRO, and DMSRO mechanisms. Section IV describes experimental settings, while Section V presents results and analysis. Section VI discusses limitations and future work, followed by the conclusion in Section VII.
 
 \section{Related Work}
 Traditional reward engineering methods, including reward shaping \cite{sutton1998reinforcement, hu2020learning} and inverse reinforcement learning \cite{ziebart2008maximum}, offer theoretical foundations but lack scalability. Recent LLM-based systems such as EUREKA \cite{ma2023eureka} and Text2Reward \cite{xie2023text2reward} leverage natural language but typically operate under static configurations. Chain-of-Thought prompting enhances reasoning capabilities \cite{wang2023c, madaan2023}, while temperature control \cite{zhu2024hot, cecere2025monte, zhang2024edt} and model adaptation \cite{hsieh2023distilling, vardhni2024performance} remain underexplored in reward generation.
