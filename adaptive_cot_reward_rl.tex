@@ -50,15 +50,28 @@ lundechen@shu.edu.cn}
 \maketitle
 
 \begin{abstract}
-    Designing effective reward functions remains a persistent bottleneck in deploying reinforcement learning (RL) to complex real-world tasks.
-    We propose a Chain-of-Thought (CoT)–enhanced reward generation framework leveraging large language models (LLMs), 
-    combined with two adaptive optimization mechanisms: Dynamic Temperature Regulation Optimization (DTRO) and Dynamic Model Selection Routing Optimization (DMSRO).
-    The CoT framework transforms task descriptions into executable reward functions with improved interpretability and generalization. DTRO dynamically adjusts LLM sampling temperature based on policy entropy and performance feedback to balance exploration and stability. DMSRO integrates local reward evaluations with global training performance to dynamically select the optimal language model, enhancing sampling efficiency and robustness.
-    Experiments on CartPole, MountainCarContinuous, BipedalWalker, Ant, and the custom SpaceMining task demonstrate that the proposed method outperforms baseline and single-optimization approaches in average reward, convergence speed, and robustness. 
-    This work establishes a new paradigm for adaptive reward engineering in RL.
+Designing effective reward functions remains a challenge in applying reinforcement learning to real-world tasks.
+This paper proposes DyCoT-RE, a reward engineering framework that integrates Chain-of-Thought (CoT) reasoning with a dual-dynamic 
+optimization strategy to automate and enhance reward function design.
+The framework uses structured CoT reasoning throughout training to generate and refine interpretable reward code in each iteration.
+It further incorporates two dynamic optimization mechanisms: a temperature adjustment strategy that modulates the sampling temperature 
+based on policy entropy trends,
+and a model switching strategy that allocates language models with different capabilities to produce distinct reward components.
+Evaluations on CartPole, BipedalWalker, Ant, and a custom SpaceMining environment show DyCoT‑RE achieves higher average rewards and faster 
+convergence compared to human-designed baselines and non‑CoT approaches as well as single-optimization approaches.
 
-
-   \textcolor{red}{Designing effective reward functions remains a bottleneck for applying reinforcement learning (RL) to complex real‑world tasks. We introduce DyCoT‑RE, a reward engineering framework that leverages Chain‑of‑Thought (CoT) reasoning alongside a dual‑dynamic optimization strategy, incorporating a dynamic temperature regulation optimization and a dynamic model selection routing optimization —which interactively co‑adapt to refine reward functions in real time. Our framework employs CoT prompts to convert high‑level task descriptions into structured, executable reward code, enhancing interpretability and generalization. ??? continuously tunes the LLM sampling temperature based on policy entropy and performance feedback, balancing exploration and stability. Concurrently, ??? fuses local reward metrics with global training outcomes to dynamically select the most effective language model, optimizing sampling efficiency and resource usage. Evaluations on CartPole, BipedalWalker, Ant, and a custom SpaceMining environment show DyCoT‑RE achieves higher average rewards and faster convergence compared to human-designed baselines and non‑CoT approaches as well as single-optimization approaches.}
+   \textcolor{red}{Designing effective reward functions remains a bottleneck for applying reinforcement learning (RL) to complex 
+   real‑world tasks. 
+   We introduce DyCoT‑RE, a reward engineering framework that leverages Chain‑of‑Thought (CoT) reasoning alongside a dual‑dynamic optimization strategy, 
+   incorporating a dynamic temperature regulation optimization and a dynamic model selection routing optimization 
+   —which interactively co‑adapt to refine reward functions in real time. 
+   Our framework employs CoT prompts to convert high‑level task descriptions into structured, executable reward code, 
+   enhancing interpretability and generalization. 
+   ??? continuously tunes the LLM sampling temperature based on policy entropy and performance feedback, balancing exploration and stability. 
+   Concurrently, ??? fuses local reward metrics with global training outcomes to dynamically select the most effective language model, 
+   optimizing sampling efficiency and resource usage. 
+   Evaluations on CartPole, BipedalWalker, Ant, and a custom SpaceMining environment show DyCoT‑RE achieves higher average rewards and faster 
+   convergence compared to human-designed baselines and non‑CoT approaches as well as single-optimization approaches.}
 
 
 
@@ -70,30 +83,46 @@ Reinforcement learning, reward engineering, large language models, chain-of-thou
 
 \section{Introduction}
 
-Reward engineering remains a major bottleneck in deploying RL to safety-critical domains such as autonomous driving and robotic manipulation \cite{sutton1998reinforcement}. 
-Designing dense, well-shaped reward functions often requires substantial domain expertise and extensive environment interactions, 
-posing significant challenges to scalability and practical deployment \cite{arora2021survey}.
-While well-shaped reward functions can significantly accelerate agent learning and improve task performance, 
-traditional reward engineering heavily relies on manual expertise and extensive trial-and-error, often resulting 
-in suboptimal generalization to new tasks or environments. 
-As RL tasks become increasingly complex and deployed in real-world scenarios with dynamic objectives, 
-there is an urgent need for automated reward design frameworks.
+Reinforcement learning (RL) has achieved impressive results in a variety of domains,
+yet its practical deployment remains limited by the challenge of designing effective reward functions.
+Constructing dense and well-shaped rewards often requires significant domain expertise
+and extensive environment interaction, creating barriers to scalability and adaptability \cite{sutton1998reinforcement, arora2021survey}.
 
-Recent advances in LLMs have demonstrated remarkable reasoning and generalization capabilities across domains \cite{brown2020language, ouyang2022training}. In particular, CoT reasoning has emerged as a powerful paradigm that enables LLMs to decompose complex problems into structured intermediate steps, enhancing both interpretability and solution quality. This structured reasoning ability makes CoT a promising approach for reward engineering, enabling the automatic generation of executable reward functions from high-level task descriptions with improved clarity and task alignment.
+While carefully designed rewards can accelerate agent learning and improve task performance,
+manual reward engineering typically relies on trial-and-error tuning,
+which is labor-intensive and often yields suboptimal generalization to new environments or objectives.
+As RL applications grow in complexity, there is a pressing need for methods that can automate
+reward design while maintaining interpretability and flexibility.
 
-However, CoT-based reward generation remains limited by static sampling parameters and fixed model configurations. Inspired by recent studies on dynamic temperature adjustment and model selection strategies, we hypothesize that integrating adaptive optimization mechanisms into the CoT reward generation pipeline can further enhance reward quality, policy stability, and sampling efficiency. Specifically, dynamically regulating the LLM sampling temperature can balance exploration versus determinism, while intelligently switching models can exploit their diverse reasoning and computational capabilities.
+Recent advances in large language models (LLMs) have demonstrated strong reasoning and generalization capabilities \cite{brown2020language, ouyang2022training}.
+In particular, Chain-of-Thought (CoT) reasoning enables LLMs to decompose tasks into structured intermediate steps,
+enhancing clarity and alignment with desired objectives.
+This structured reasoning process can support reward engineering by converting task descriptions
+into executable reward functions in a systematic and transparent manner.
 
-In this work, we make the following contributions:
+However, existing CoT-based reward generation approaches typically use static sampling parameters and fixed model configurations,
+which may limit their adaptability during training.
+Motivated by recent progress in dynamic temperature adjustment and model selection strategies,
+we explore whether integrating adaptive optimization mechanisms into CoT-based reward generation
+can improve reward quality, training stability, and sampling efficiency.
+Dynamic temperature modulation can adjust exploration levels throughout training,
+while model selection strategies can allocate LLMs with specialized capabilities to different reward generation tasks.
 
-Firstly, we propose a \textbf{Chain-of-Thought–based reward generation framework} that transforms natural language task descriptions into structured and executable reward functions, enhancing interpretability and generalization.
+In this work, we propose DyCoT-RE, a reward engineering framework that integrates structured CoT reasoning
+with dual-dynamic optimization.
+DyCoT-RE applies CoT reasoning throughout the training process to iteratively generate and refine reward functions,
+while incorporating adaptive temperature adjustment based on policy entropy trends,
+and dynamic model selection to assign LLMs with suitable strengths to specific components of reward generation.
 
-Secondly, we design a \textbf{Dynamic Temperature Regulation Optimization (DTRO)} mechanism that monitors policy entropy and performance feedback to adaptively adjust sampling temperature, thereby balancing exploration stability trade-offs.
+We evaluate DyCoT-RE on four standard RL environments—CartPole, MountainCarContinuous, BipedalWalker, and Ant—
+as well as a custom SpaceMining environment.
+Results show that DyCoT-RE achieves improved average rewards and faster convergence compared to baselines and non-CoT methods.
 
-Thirdly, we introduce a \textbf{Dynamic Model Selection Routing Optimization (DMSRO)} mechanism that integrates local reward evaluations with global training performance to dynamically select optimal LLMs, improving sampling efficiency and system robustness.
-
-Finally, we conduct extensive experiments across four standard RL environments—CartPole, MountainCarContinuous, BipedalWalker, and Ant—as well as a custom-designed SpaceMining task. Results demonstrate that our proposed framework outperforms baseline and single-optimization approaches in terms of average reward, convergence speed, resource efficiency, and policy robustness.
-
-The remainder of this paper is organized as follows. Section II reviews related work in reward engineering and CoT-based reasoning. Section III details our proposed methodology, including the CoT reward generation framework, DTRO, and DMSRO mechanisms. Section IV describes experimental settings, while Section V presents results and analysis. Section VI discusses limitations and future work, followed by the conclusion in Section VII.
+The remainder of this paper is organized as follows.
+Section II reviews related work in reward engineering, LLM-based reward generation, and adaptive optimization.
+Section III describes the proposed methodology, including the CoT reward framework, temperature adjustment, and model selection.
+Section IV details the experimental setup, and Section V presents results and analysis.
+Section VI discusses limitations and future work, with Section VII concluding the paper.
 
 \section{Related Work}
 
@@ -218,7 +247,7 @@ This mechanism adapts the creativity and determinism of LLM outputs according to
     \centering
     \includegraphics[width=0.95\textwidth]{./Figures/reward_episode_curve.png}
     \caption{Average reward over training episodes in five environments. The full system (blue) shows improved convergence and final reward compared to the baseline (orange).}
-    \label{fig:reward-episode}
+    \label{fig:reward_curve}
 \end{figure*}
 
 \subsection{Dynamic Model Selection (DMSRO)}
@@ -283,10 +312,9 @@ Figure \ref{fig:model_switch_log} presents the model switching log visualization
     \centering
     \includegraphics[width=0.45\textwidth]{./Figures/model_switch_log.png}
     \caption{DMSRO model switching log. X-axis: timestep, color: selected model (LLaMA-3, Qwen-2.5, DeepSeek-R1), line: reward progression. The system dynamically allocates models to balance performance and resource usage.}
-    \label{fig:model-switch-log}
+    \label{fig:model_switch_log}
 \end{figure}
 
-Table~\ref{tab:dmsro-performance} summarizes the reward performance under different model selection strategies. DMSRO achieves an optimal balance between performance and GPU resource consumption, reducing computational hours by approximately 14.8\% while maintaining superior reward levels.
 
 \subsection{Joint System Performance}
 
