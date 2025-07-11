@@ -54,25 +54,11 @@ Designing effective reward functions remains a challenge in applying reinforceme
 This paper proposes DyCoT-RE, a reward engineering framework that integrates Chain-of-Thought (CoT) reasoning with a dual-dynamic 
 optimization strategy to automate and enhance reward function design.
 The framework uses structured CoT reasoning throughout training to generate and refine interpretable reward code in each iteration.
-It further incorporates two dynamic optimization mechanisms: a temperature adjustment strategy that modulates the sampling temperature 
+It further incorporates a dual-dynamic optimization mechanism: a temperature adjustment strategy that modulates the sampling temperature 
 based on policy entropy trends,
 and a model switching strategy that allocates language models with different capabilities to produce distinct reward components.
 Evaluations on CartPole, BipedalWalker, Ant, and a custom SpaceMining environment show DyCoT‑RE achieves higher average rewards and faster 
 convergence compared to human-designed baselines and non‑CoT approaches as well as single-optimization approaches.
-
-   \textcolor{red}{Designing effective reward functions remains a bottleneck for applying reinforcement learning (RL) to complex 
-   real‑world tasks. 
-   We introduce DyCoT‑RE, a reward engineering framework that leverages Chain‑of‑Thought (CoT) reasoning alongside a dual‑dynamic optimization strategy, 
-   incorporating a dynamic temperature regulation optimization and a dynamic model selection routing optimization 
-   —which interactively co‑adapt to refine reward functions in real time. 
-   Our framework employs CoT prompts to convert high‑level task descriptions into structured, executable reward code, 
-   enhancing interpretability and generalization. 
-   ??? continuously tunes the LLM sampling temperature based on policy entropy and performance feedback, balancing exploration and stability. 
-   Concurrently, ??? fuses local reward metrics with global training outcomes to dynamically select the most effective language model, 
-   optimizing sampling efficiency and resource usage. 
-   Evaluations on CartPole, BipedalWalker, Ant, and a custom SpaceMining environment show DyCoT‑RE achieves higher average rewards and faster 
-   convergence compared to human-designed baselines and non‑CoT approaches as well as single-optimization approaches.}
-
 
 
 \end{abstract}
@@ -87,6 +73,7 @@ Reinforcement learning (RL) has achieved impressive results in a variety of doma
 yet its practical deployment remains limited by the challenge of designing effective reward functions.
 Constructing dense and well-shaped rewards often requires significant domain expertise
 and extensive environment interaction, creating barriers to scalability and adaptability \cite{sutton1998reinforcement, arora2021survey}.
+
 
 While carefully designed rewards can accelerate agent learning and improve task performance,
 manual reward engineering typically relies on trial-and-error tuning,
@@ -114,7 +101,26 @@ DyCoT-RE applies CoT reasoning throughout the training process to iteratively ge
 while incorporating adaptive temperature adjustment based on policy entropy trends,
 and dynamic model selection to assign LLMs with suitable strengths to specific components of reward generation.
 
-We evaluate DyCoT-RE on four standard RL environments—CartPole, MountainCarContinuous, BipedalWalker, and Ant—
+Figure~\ref{fig:framework} illustrates the proposed DyCoT-RE framework, 
+which integrates structured Chain-of-Thought (CoT) reasoning with dual-dynamic optimization 
+to automate reward function generation. The framework features an iterative process that 
+decomposes task descriptions into sub-goals, formulates structured mathematical rewards, 
+and refines them through evolutionary search cycles. Its dynamic temperature adjustment 
+balances sampling diversity and stability, while adaptive model selection allocates specialized 
+large language models (LLMs) for different stages of task decomposition, code generation, 
+error correction, and performance analysis. This closed-loop architecture enables the generation 
+of executable reward functions that align with task objectives while maintaining interpretability.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.49\textwidth]{Figures/evolution.drawio (1).png}
+    \caption{
+        DyCoT-RE architectural 
+    }
+    \label{fig:architecture}
+\end{figure}
+
+We evaluate DyCoT-RE on four standard RL environments—CartPole, BipedalWalker, and Ant—
 as well as a custom SpaceMining environment.
 Results show that DyCoT-RE achieves improved average rewards and faster convergence compared to baselines and non-CoT methods.
 
@@ -128,120 +134,244 @@ Section VI discusses limitations and future work, with Section VII concluding th
 
 \subsection{Reward Engineering Paradigms}
 
-In RL, the design of effective reward functions directly shapes agent behavior and learning outcomes. Traditional approaches primarily rely on handcrafted reward functions informed by domain expertise. While intuitive, such manual design often struggles to capture complex, dynamic task objectives and is prone to suboptimal or biased formulations, hindering agent performance in real-world scenarios.
+In RL, the design of effective reward functions directly shapes agent behavior and learning outcomes. 
+Traditional approaches primarily rely on handcrafted reward functions informed by domain expertise. 
+While intuitive, such manual design often struggles to capture complex, dynamic task objectives and is prone to 
+suboptimal or biased formulations, hindering agent performance in real-world scenarios.
 
-To address these limitations, reward shaping was introduced as a formal enhancement strategy. Ng et al. \cite{ng1999policy} demonstrated that potential-based reward shaping preserves optimal policies while enabling accelerated convergence, laying the theoretical foundation for numerous practical implementations. Intrinsic motivation frameworks further advanced this field by encouraging exploration through curiosity-driven signals. Singh et al. \cite{singh2010intrinsically} proposed intrinsic rewards to incentivize novel state visits, later extended by Burda et al. \cite{burda2018exploration}, who empirically validated large-scale curiosity-driven exploration benefits across diverse environments.
+To address these limitations, reward shaping was introduced as a formal enhancement strategy. 
+Ng et al. \cite{ng1999policy} demonstrated that potential-based reward shaping preserves optimal policies 
+while enabling accelerated convergence, laying the theoretical foundation for numerous practical implementations. 
+Intrinsic motivation frameworks further advanced this field by encouraging exploration through curiosity-driven signals. 
+Singh et al. \cite{singh2010intrinsically} proposed intrinsic rewards to incentivize novel state visits, 
+later extended by Burda et al. \cite{burda2018exploration}, who empirically validated large-scale curiosity-driven exploration 
+benefits across diverse environments.
 
-Despite these developments, manually designing rewards for complex or evolving tasks remains inefficient and costly. LLMs offer a promising alternative by leveraging their natural language understanding to automate reward generation and optimization. Unlike traditional RL pipelines that require explicit, task-specific reward formulations, LLMs can interpret high-level task descriptions, extract key objectives, and translate them into executable reward functions. This capability facilitates more intuitive alignment with human intentions, reduces engineering overhead, and enhances agent adaptability.
+Despite these developments, manually designing rewards for complex or evolving tasks remains inefficient and costly. 
+LLMs offer a promising alternative by leveraging their natural language understanding to automate reward generation 
+and optimization. Unlike traditional RL pipelines that require explicit, task-specific reward formulations, 
+LLMs can interpret high-level task descriptions, extract key objectives, and translate them into executable reward functions. 
+This capability facilitates more intuitive alignment with human intentions, reduces engineering overhead, and enhances agent 
+adaptability.
 
-Recent frameworks exemplify this trend. EUREKA \cite{ma2023eureka}, Text2Reward \cite{xie2023text2reward}, and CARD \cite{sun2024large} harness LLMs to automatically generate, verify, and refine reward code from natural language instructions, reducing manual intervention while improving correctness and alignment. Notably, CARD emphasizes the importance of integrated verification loops, eliminating reliance on external human feedback and enhancing system robustness.
+Recent frameworks exemplify this trend. EUREKA \cite{ma2023eureka}, Text2Reward \cite{xie2023text2reward}, 
+CARD \cite{sun2024large}, and PCGRLLM \cite{baek2024pcgrllm} harness LLMs to automatically generate, verify, 
+and refine reward code from natural language instructions. Notably, PCGRLLM extends this capability to procedural content 
+generation tasks, demonstrating that LLM-driven reward design can generalize beyond standard control problems to complex 
+creative domains such as game level generation.
 
-Beyond static code generation, feedback-driven optimization approaches have emerged. ReMiss \cite{xie2024jailbreaking} utilizes adversarial prompt generation to identify and mitigate reward misspecification vulnerabilities, enhancing LLM safety and reliability. Self-Play Preference Optimization (SPPO) \cite{wu2024self} employs self-play to uncover Nash-equilibrium strategies that capture complex, non-transitive human preferences, advancing preference learning's applicability in RL. Additionally, PRMBench \cite{song2025prmbench} provides a process-level benchmark to evaluate intermediate reward model outputs along dimensions such as conciseness, rationality, and sensitivity, revealing weaknesses in current models and guiding future improvements.
 
-Overall, LLM-based reward engineering represents a paradigm shift. By integrating natural language reasoning and dynamic feedback optimization, these methods offer scalable, adaptable, and human-aligned reward generation pipelines. As tasks grow in complexity and diversity, leveraging LLMs to bridge the gap between human intent and machine learning objectives will be critical for the next generation of intelligent systems. Continued research is thus needed to maximize the synergy between LLM capabilities and RL frameworks to address emerging real-world challenges.
+Beyond static code generation, feedback-driven optimization approaches have emerged. ReMiss \cite{xie2024jailbreaking} 
+utilizes adversarial prompt generation to identify and mitigate reward misspecification vulnerabilities, 
+enhancing LLM safety and reliability. Self-Play Preference Optimization (SPPO) \cite{wu2024self} employs self-play to 
+uncover Nash-equilibrium strategies that capture complex, non-transitive human preferences, advancing preference learning's 
+applicability in RL. 
+Additionally, PRMBench \cite{song2025prmbench} provides a process-level benchmark to evaluate intermediate reward model 
+outputs along dimensions such as conciseness, rationality, and sensitivity, revealing weaknesses in current models and 
+guiding future improvements.
+
+Overall, LLM-based reward engineering represents a paradigm shift. 
+By integrating natural language reasoning and dynamic feedback optimization, 
+these methods offer scalable, adaptable, and human-aligned reward generation pipelines. 
+As tasks grow in complexity and diversity, leveraging LLMs to bridge the gap between human 
+intent and machine learning objectives will be critical for the next generation of intelligent systems. 
+Continued research is thus needed to maximize the synergy between LLM capabilities and RL frameworks to 
+address emerging real-world challenges.
 
 \subsection{Chain-of-Thought Reasoning Methods}
 
-CoT reasoning has emerged as a powerful paradigm to enhance the reasoning capabilities of LLMs. By generating intermediate reasoning steps, CoT allows models to decompose complex problems into interpretable sub-problems, leading to significant performance gains in tasks requiring multi-step logical inference.
+CoT reasoning has emerged as a powerful paradigm to enhance the reasoning capabilities of LLMs. 
+By generating intermediate reasoning steps, CoT allows models to decompose complex problems into interpretable sub-problems, 
+leading to significant performance gains in tasks requiring multi-step logical inference.
 
-Early studies revealed that even simple prompting strategies, such as adding ``Let's think step by step'' to inputs, can elicit surprisingly strong zero-shot reasoning abilities from LLMs. Kojima et al. \cite{kojima2022large} demonstrated that such zero-shot CoT prompting significantly improves model performance in arithmetic and commonsense reasoning tasks. Building on this, few-shot CoT \cite{liu2022few, wei2022chain} introduced demonstrations of step-wise solutions to guide models in decomposing complex problems, while self-consistency decoding \cite{wang2022self} aggregated multiple sampled reasoning paths to select the most consistent answer, thereby enhancing robustness.
+Early studies revealed that even simple prompting strategies, such as adding ``Let's think step by step'' to inputs, 
+can elicit surprisingly strong zero-shot reasoning abilities from LLMs. 
+Kojima et al. \cite{kojima2022large} demonstrated that such zero-shot CoT prompting significantly improves model performance 
+in arithmetic and commonsense reasoning tasks. 
+Building on this, few-shot CoT \cite{liu2022few, wei2022chain} introduced demonstrations of step-wise solutions to guide models 
+in decomposing complex problems, while self-consistency decoding \cite{wang2022self} aggregated multiple sampled reasoning paths 
+to select the most consistent answer, thereby enhancing robustness.
 
-Subsequent works have advanced CoT through architectural and algorithmic innovations. For instance, DeepSeek introduced a reinforcement learning-trained model \cite{deepseek2023r1} achieving an AIME benchmark accuracy improvement from 71.0\% to 86.7\% without supervised fine-tuning, utilizing a ``self-evolution'' mechanism to optimize reasoning trajectories and generation length dynamically. Program-aided language models \cite{gao2023} combine symbolic program execution with CoT for mathematical reasoning, while automatic prompt generation methods, such as zero-shot CoT and semi-automatic CoT prompt optimization \cite{shum2023automatic, pitis2023}, reduce reliance on manual prompt engineering by leveraging data-driven prompt refinement.
+Subsequent works have advanced CoT through architectural and algorithmic innovations. 
+For instance, DeepSeek introduced a reinforcement learning-trained model \cite{deepseek2023r1} achieving an AIME 
+benchmark accuracy improvement from 71.0\% to 86.7\% without supervised fine-tuning, 
+utilizing a ``self-evolution'' mechanism to optimize reasoning trajectories and generation length dynamically. 
+Program-aided language models \cite{gao2023} combine symbolic program execution with CoT for mathematical reasoning, 
+while automatic prompt generation methods, such as zero-shot CoT and semi-automatic CoT prompt optimization \cite{shum2023automatic, pitis2023}, 
+reduce reliance on manual prompt engineering by leveraging data-driven prompt refinement.
 
-Enhancement techniques such as VerifyCoT \cite{ling2023deductive} and Self-Refine \cite{madaan2023} validate and iteratively refine intermediate reasoning steps to improve accuracy and reliability. Problem decomposition methods, including least-to-most prompting \cite{zhou2022least} and successive prompting \cite{dua2022}, guide models from simple to complex sub-tasks to reduce cognitive load and improve solution rates. Knowledge-augmented CoT approaches integrate external knowledge bases to ground reasoning, as demonstrated by Chain-of-Knowledge prompting \cite{wang2023c} and self-prompted CoT for open-domain multi-hop reasoning \cite{wang2023e}. In numerical reasoning, Program-of-Thoughts prompting \cite{chen2022} disentangles computational execution from logical inference to enhance transparency, while LINC \cite{olausson2023} combines neurosymbolic logic proving with CoT for explainable reasoning.
+Enhancement techniques such as VerifyCoT \cite{ling2023deductive} and Self-Refine \cite{madaan2023} validate and 
+iteratively refine intermediate reasoning steps to improve accuracy and reliability. 
+Problem decomposition methods, including least-to-most prompting \cite{zhou2022least} and successive prompting \cite{dua2022}, 
+guide models from simple to complex sub-tasks to reduce cognitive load and improve solution rates. 
+Knowledge-augmented CoT approaches integrate external knowledge bases to ground reasoning, 
+as demonstrated by Chain-of-Knowledge prompting \cite{wang2023c} and self-prompted CoT for open-domain multi-hop reasoning \cite{wang2023e}. In numerical reasoning, Program-of-Thoughts prompting \cite{chen2022} disentangles computational execution from logical inference to enhance transparency, while LINC \cite{olausson2023} combines neurosymbolic logic proving with CoT for explainable reasoning.
 
-Applications combining CoT with external tools have expanded LLM capabilities in code generation, planning, and multi-step task execution \cite{parisi2022talm, liu2023llm+}. Distilling stepwise reasoning processes reduces inference costs while maintaining high accuracy. Recent frameworks integrate CoT with Monte Carlo Tree Search (MCTS) to systematically explore reasoning pathways \cite{pan2025coat}, and abstraction-based reasoning enhances efficiency in complex mathematical tasks \cite{shao2024deepseekmath}. Moreover, generating concise intermediate outputs has enabled state-of-the-art performance on GSM8K math benchmarks with reduced computation overhead \cite{xu2025chain}.
+Applications combining CoT with external tools have expanded LLM capabilities in code generation, planning, and multi-step task 
+execution \cite{parisi2022talm, liu2023llm+}. 
+Distilling stepwise reasoning processes reduces inference costs while maintaining high accuracy. 
+Recent frameworks integrate CoT with Monte Carlo Tree Search (MCTS) to systematically explore reasoning pathways \cite{pan2025coat}, 
+and abstraction-based reasoning enhances efficiency in complex mathematical tasks \cite{shao2024deepseekmath}. 
+Moreover, generating concise intermediate outputs has enabled state-of-the-art performance on GSM8K math benchmarks with reduced 
+computation overhead \cite{xu2025chain}.
 
-In summary, CoT reasoning has established itself as a fundamental methodology for enhancing the reasoning capacity, interpretability, and robustness of LLMs. Its diverse technical innovations not only improve performance across a wide range of cognitive tasks but also provide theoretical and practical foundations for developing transparent and trustworthy AI systems.
+In summary, CoT reasoning has established itself as a fundamental methodology for enhancing the reasoning capacity, 
+interpretability, and robustness of LLMs. Its diverse technical innovations not only improve performance across a wide 
+range of cognitive tasks but also provide theoretical and practical foundations for developing transparent and trustworthy AI 
+systems.
 
 \subsection{Dynamic Temperature Adjustment and Model Selection}
 
-Dynamic temperature adjustment and model selection have emerged as critical optimization strategies to enhance the adaptability and efficiency of large language model (LLM)-based systems. Temperature, as a sampling hyperparameter, controls the stochasticity of LLM outputs, thereby influencing creativity, coherence, and exploration-exploitation trade-offs.
+Dynamic temperature adjustment and model selection have emerged as critical optimization strategies to enhance the adaptability
+and efficiency of large language model (LLM)-based systems. 
+Temperature, as a sampling hyperparameter, controls the stochasticity of LLM outputs, thereby influencing creativity, coherence,
+and exploration-exploitation trade-offs.
 
-Recent studies have systematically explored adaptive temperature mechanisms. Zhu et al. \cite{zhu2024hot} proposed adaptive temperature sampling for code generation, dynamically adjusting temperatures based on task complexity and model uncertainty to improve generation quality. Cecere et al. \cite{cecere2025monte} introduced Monte Carlo Temperature, a robust sampling strategy for uncertainty quantification, enhancing LLM reliability under distribution shifts. Similarly, Zhang et al. \cite{zhang2024edt} developed Entropy-based Dynamic Temperature (EDT) sampling to regulate model entropy and output diversity in natural language generation. Peeperkorn et al. \cite{peeperkorn2024temperature} examined temperature's role in creativity modulation, while Evstafev \cite{evstafev2025paradox} highlighted potential limitations in creativity gains versus computational decoupling in structured data generation. Nguyen et al. \cite{nguyen2024turning} proposed min-p sampling, adjusting temperature to balance creativity and coherence, achieving state-of-the-art performance in narrative generation.
+Recent studies have systematically explored adaptive temperature mechanisms. Zhu et al. \cite{zhu2024hot} proposed adaptive 
+temperature sampling for code generation, dynamically adjusting temperatures based on task complexity and model uncertainty 
+to improve generation quality. Cecere et al. \cite{cecere2025monte} introduced Monte Carlo Temperature, a robust sampling 
+strategy for uncertainty quantification, enhancing LLM reliability under distribution shifts. 
+Similarly, Zhang et al. \cite{zhang2024edt} developed Entropy-based Dynamic Temperature (EDT) sampling to regulate model entropy
+and output diversity in natural language generation. Peeperkorn et al. \cite{peeperkorn2024temperature} examined 
+temperature's role in creativity modulation, while Evstafev \cite{evstafev2025paradox} highlighted potential limitations 
+in creativity gains versus computational decoupling in structured data generation. Nguyen et al. \cite{nguyen2024turning} 
+proposed min-p sampling, adjusting temperature to balance creativity and coherence, achieving state-of-the-art performance 
+in narrative generation.
 
-Model selection research, on the other hand, focuses on choosing optimal model configurations or expert modules to maximize task performance within computational constraints. Switch Transformers \cite{fedus2022switch} introduced sparse activation for trillion-parameter models, enabling efficient expert selection. ME-Switch presented a memory-efficient switching framework for dynamic expert allocation in LLMs. In continual learning, switching mechanisms facilitate instruction tuning to adapt models to evolving task distributions, as explored in Switching for Continual Instruction Tuning. GLaM \cite{du2022glam} leveraged Mixture-of-Experts (MoE) architectures to scale model capacity dynamically. QLoRA and DyLoRA proposed quantization-aware and low-rank adaptation methods for efficient parameter tuning and rapid model switching across tasks. Furthermore, LoraHub introduced dynamic LoRA composition to enhance cross-task generalization, while Self-Expansion with Mixture of Adapters \cite{wang2025self} enabled continual learning via adaptive expert composition.
+Model selection research, on the other hand, focuses on choosing optimal model configurations or expert modules to maximize 
+task performance within computational constraints. Switch Transformers \cite{fedus2022switch} introduced sparse activation 
+for trillion-parameter models, enabling efficient expert selection. 
+ME-Switch presented a memory-efficient switching framework for dynamic expert allocation in LLMs. 
+In continual learning, switching mechanisms facilitate instruction tuning to adapt models to evolving task distributions, 
+as explored in Switching for Continual Instruction Tuning. GLaM \cite{du2022glam} leveraged Mixture-of-Experts (MoE) 
+architectures to scale model capacity dynamically. QLoRA and DyLoRA proposed quantization-aware and low-rank adaptation methods 
+for efficient parameter tuning and rapid model switching across tasks. 
+Furthermore, LoraHub introduced dynamic LoRA composition to enhance cross-task generalization, while Self-Expansion with Mixture 
+of Adapters \cite{wang2025self} enabled continual learning via adaptive expert composition.
 
-Despite these advances, integrating dynamic temperature regulation and model selection within a unified CoT-driven reward engineering framework remains underexplored. Existing temperature adaptation methods primarily focus on text generation diversity and confidence calibration, whereas model selection research emphasizes computational efficiency and task specialization. Our work addresses this gap by combining entropy- and reward-feedback-based temperature adjustment with local-global performance-based model routing to enhance RL reward generation's adaptability, stability, and sample efficiency. This approach builds upon foundational theories in temperature scaling and expert selection, extending them to the domain of automated, interpretable reward engineering for reinforcement learning.
+Despite these advances, integrating dynamic temperature regulation and model selection within a unified CoT-driven reward 
+engineering framework remains underexplored. Existing temperature adaptation methods primarily focus on text generation 
+diversity and confidence calibration, whereas model selection research emphasizes computational efficiency and task 
+specialization. Our work addresses this gap by combining entropy- and reward-feedback-based temperature adjustment 
+with local-global performance-based model routing to enhance RL reward generation's adaptability, stability, and sample 
+efficiency. This approach builds upon foundational theories in temperature scaling and expert selection, extending them 
+to the domain of automated, interpretable reward engineering for reinforcement learning.
 
 \subsection{Differentiation and Contribution of This Work}
 
-Despite significant advances in reward engineering, CoT reasoning, and adaptive optimization techniques, existing approaches remain fragmented and task-specific. Traditional reward shaping methods rely heavily on expert-designed heuristics, limiting their adaptability to unseen tasks and dynamic environments. While recent frameworks such as EUREKA and Text2Reward leverage LLMs to automate reward design, they generally operate under static generation paradigms without runtime optimization. This limits their ability to accommodate dynamic training processes in RL, potentially resulting in suboptimal exploration-exploitation balance or brittle convergence.
+Despite significant advances in reward engineering, CoT reasoning, and adaptive optimization techniques, 
+existing approaches remain fragmented and task-specific. 
+Traditional reward shaping methods rely heavily on expert-designed heuristics, limiting their adaptability 
+to unseen tasks and dynamic environments. While recent frameworks such as EUREKA and Text2Reward leverage LLMs 
+to automate reward design, they generally operate under static generation paradigms without runtime optimization. 
+This limits their ability to accommodate dynamic training processes in RL, potentially resulting in suboptimal 
+exploration-exploitation balance or brittle convergence.
 
-CoT reasoning has emerged as a powerful mechanism for enhancing the interpretability and logical consistency of LLM outputs, demonstrating strong performance in mathematical and logical reasoning tasks. However, its application in RL reward engineering remains underexplored, with prior work rarely integrating CoT reasoning into automated reward pipelines. Additionally, while adaptive temperature adjustment techniques have been shown to improve sampling diversity and stability, and dynamic model selection frameworks such as Switch Transformers and GLaM improve computational efficiency and scalability in LLMs, there exists a lack of research on jointly integrating these dynamic optimization strategies within CoT-based reward generation systems.
+CoT reasoning has emerged as a powerful mechanism for enhancing the interpretability and logical consistency 
+of LLM outputs, demonstrating strong performance in mathematical and logical reasoning tasks. 
+However, its application in RL reward engineering remains underexplored, with prior work rarely integrating 
+CoT reasoning into automated reward pipelines. Additionally, while adaptive temperature adjustment techniques 
+have been shown to improve sampling diversity and stability, and dynamic model selection frameworks such as Switch 
+Transformers and GLaM improve computational efficiency and scalability in LLMs, there exists a lack of research 
+on jointly integrating these dynamic optimization strategies within CoT-based reward generation systems.
 
-To address these limitations, this work introduces a unified framework that combines CoT-enhanced reward generation with dual-dynamic optimization mechanisms. Specifically, it presents a structured CoT-based reward generation approach that translates natural language task descriptions into interpretable and executable reward functions, enhancing generalization and sample efficiency. Building upon this, the proposed Dynamic Temperature Regulation Optimization (DTRO) module adjusts LLM sampling temperature in real time based on policy entropy and performance feedback, effectively balancing exploration and exploitation during training. Furthermore, the Dynamic Model Selection Routing Optimization (DMSRO) module integrates local reward evaluation with global performance assessments to dynamically switch among multiple LLMs, improving reward generation quality while optimizing computational resource usage.
+To address these limitations, this work introduces a unified framework that combines CoT-enhanced reward generation 
+with dual-dynamic optimization mechanisms. Specifically, it presents a structured CoT-based reward generation approach 
+that translates natural language task descriptions into interpretable and executable reward functions, 
+enhancing generalization and sample efficiency. Building upon this, the proposed Dynamic Temperature Regulation 
+Optimization (DTRO) module adjusts LLM sampling temperature in real time based on policy entropy and performance 
+feedback, effectively balancing exploration and exploitation during training. Furthermore, the Dynamic Model 
+Selection Routing Optimization (DMSRO) module integrates local reward evaluation with global performance assessments 
+to dynamically switch among multiple LLMs, improving reward generation quality while optimizing computational resource usage.
 
-The effectiveness of this framework is systematically validated across four standard RL benchmarks—CartPole, MountainCarContinuous, BipedalWalker, and Ant—as well as a custom-designed SpaceMining environment. Results demonstrate superior performance in terms of average reward, convergence speed, resource consumption, and robustness compared to both baseline methods and single optimization variants. Collectively, this study establishes a novel paradigm for automated, interpretable, and adaptive reward engineering by synergistically combining CoT reasoning with dynamic optimization mechanisms, advancing the capability of RL systems in tackling complex, dynamic tasks.
+The effectiveness of this framework is systematically validated across four standard RL benchmarks—CartPole, 
+BipedalWalker, and Ant—as well as a custom-designed SpaceMining environment. 
+Results demonstrate superior performance in terms of average reward, convergence speed, resource consumption, 
+and robustness compared to both baseline methods and single optimization variants. Collectively, this study 
+establishes a novel paradigm for automated, interpretable, and adaptive reward engineering by synergistically 
+combining CoT reasoning with dynamic optimization mechanisms, advancing the capability of RL systems in tackling complex, 
+dynamic tasks.
 
 
 
 
 \section{Methodology}
-\subsection{Architecture Overview}
-The proposed framework combines evolutionary search with dynamic reward optimization, as illustrated in Fig.~\ref{fig:architecture} and Fig.~\ref{fig:evolution}. The system processes natural language inputs (e.g., "Design a reward function for stable bipedal robot walking") through a dual-path mechanism:
+
+This section details the proposed DyCoT-RE framework, which integrates structured Chain-of-Thought (CoT) reasoning with a dual-dynamic optimization strategy to generate adaptive and interpretable reward functions for reinforcement learning (RL).
+
+\subsection{Framework Overview}
+
+Figure~\ref{fig:architecture} illustrates the overall architecture of DyCoT-RE. The framework consists of an input layer for task description and environment specification, a processing layer combining CoT decomposition with dual-dynamic optimization, and an output layer that produces executable reward functions alongside training performance dashboards. The system operates in an iterative evolutionary loop, progressively refining reward functions across generations through feedback-driven adaptation of sampling temperature and model selection.
 
 \begin{figure}[t]
-\centering
-\includegraphics[width=0.95\linewidth]{./Figures/architecture.png}
-\caption{Reward function design framework. Top: Natural language task specification and environment interface. Middle: Chain-of-Thought reasoning (left) and dynamic optimization modules (right). Bottom: Executable output and monitoring system.}
-\label{fig:architecture}
+    \centering
+    \includegraphics[width=0.4\textwidth]{Figures/dy.png}
+    \caption{
+       DyCoT-RE framework     }
+    \label{fig:architecture}
 \end{figure}
 
-\subsection{Chain-of-Thought Generation}
-The left branch in Fig.~\ref{fig:architecture} demonstrates the three-stage decomposition process:
+\subsection{Chain-of-Thought Reasoning for Reward Engineering}
+
+Chain-of-Thought (CoT) reasoning is a core component of DyCoT-RE. It enables the transformation of natural language task descriptions into structured and executable reward functions by decomposing complex goals into logical subgoals and formalizing them as differentiable mathematical expressions. Given a task description $d$, CoT parsing generates a set of sub-reward components $r_i(s,a)$ and their associated weight coefficients $w_i$, leading to a composite reward function of the form:
+
 \begin{equation}
-\text{CoT}(d) \rightarrow \begin{cases}
-\text{Decompose goal} & \text{(e.g., balance, forward motion)} \\
-\text{Identify key states} & \text{(e.g., torso angle $\theta$)} \\
-\text{Mathematical modeling} & \text{(e.g., $r_t = w_1\cos\theta + w_2v_x$)}
-\end{cases}
+R(s,a) = \sum_{i=1}^{m} w_i \cdot r_i(s,a)
 \end{equation}
 
-\subsection{Dynamic Optimization}
-The evolutionary loop in Fig.~\ref{fig:evolution} operates through:
+Each sub-reward component is derived from intermediate reasoning steps produced by the CoT process, ensuring transparency and interpretability of the final reward function. For instance, minimizing torso tilt in a bipedal walking task can be formalized as:
+
 \begin{equation}
-P_{t+1} = \underbrace{\text{Select}(P_t, k=0.2)}_{\text{Elite selection}} \oplus \underbrace{\text{Mutate}(\theta, T)}_{\substack{\text{Temperature-}\\ \text{controlled}}}
+r_{\text{tilt}}(s,a) = -|\theta_{\text{tilt}}(s)|
 \end{equation}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.95\linewidth]{./Figures/evolution.png}
-\caption{Evolutionary search loop for reward optimization. The process iteratively refines reward functions through parallel RL training, with fitness evaluation driving selection and mutation.}
-\label{fig:evolution}
-\end{figure}
+The weights $w_i$ are initially inferred based on subgoal priority and are subsequently refined throughout iterative training to maximize expected cumulative rewards under the agent’s policy.
 
-The DTRO module regulates exploration-exploitation balance via entropy-aware temperature adjustment:
+\subsection{Dual-Dynamic Optimization Strategy}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Figures/dy-op.drawio.png}
+    \caption{
+        Evolutionary search loop of DyCoT-RE. The framework integrates CoT decomposition, dynamic temperature adjustment, and model selection within a closed feedback loop, enabling adaptive reward refinement across generations.
+    }
+    \label{fig:evolution_loop}
+\end{figure*}
+
+To enhance adaptability and sampling efficiency, DyCoT-RE integrates temperature adjustment and model selection into a unified dual-dynamic optimization strategy. These mechanisms modulate LLM sampling behavior to balance creativity, consistency, and computational cost.
+
+\subsubsection{Dynamic Temperature Adjustment}
+
+Temperature adjustment is formulated as a constrained stochastic optimal control problem, where the sampling temperature $T$ is dynamically modulated based on policy entropy $H_t$, confidence indicator $C_t$, and historical performance trends. The adjustment $\Delta T$ at time step $t$ is computed as:
+
 \begin{equation}
-\Delta T = \beta \frac{\partial H}{\partial t} \cdot \mathbb{I}(\sigma_R > \tau)
+    \Delta T = 0.3(H_t - H_{target}) + 0.11\int (H_t - H_{target})dt + 0.05\frac{dH}{dt}
 \end{equation}
 
-where $\mathbb{I}(\cdot)$ is the indicator function. The DMSRO component, shown in the right branch of Fig.~\ref{fig:architecture}, optimizes model selection through:
+where $\beta$ is the momentum coefficient, $\alpha_1$ and $\alpha_2$ are scaling parameters, $\bar{H}$ and $\sigma_H$ denote reference entropy and its standard deviation, and $\theta_c$ is the target confidence level.
+
+\subsubsection{Dynamic Model Selection}
+
+Model selection is formalized as an optimization problem over a set of candidate models $F$, aiming to select the model $f^*$ maximizing expected performance:
+
 \begin{equation}
-m^* = \mathop{\mathrm{arg\,max}}\limits_{m \in \mathcal{M}} \left( \alpha \cdot \text{Score}(m) + (1-\alpha)\cdot \text{Efficiency}(m) \right)
+f^* = \arg\max_{f \in F} \mathbb{E}_{z \sim D}[p(f,z)]
 \end{equation}
 
-\subsection{Integration Mechanism}
-The two diagrams collectively demonstrate how initial CoT-generated rewards evolve through:
-\begin{itemize}
-\item Continuous refinement via the evolutionary loop (Fig.~\ref{fig:evolution})
-\item Real-time adaptation through dynamic modules (Fig.~\ref{fig:architecture})
-\end{itemize}
+where $z$ is sampled from the task distribution $D$, and $p(f,z)$ is the module-wise performance evaluation. Fused performance combines local performance estimates with global task feedback, ensuring that selected models align with both immediate reward quality and long-term training objectives.
 
-The fitness function $F=0.4S+0.3C+0.3E$ in Fig.~\ref{fig:evolution} ensures balanced optimization of stability ($S$), completion ($C$), and efficiency ($E$).
+\subsection{Evolutionary Search Loop}
 
-The proposed framework models reward generation as a function of task description, temperature, and model:
-\begin{equation}
-R(s,a,t) = \Phi(d, T(t), m(t))
-\end{equation}
-where $\Phi$ denotes the CoT-based LLM generation process.
+Figure~\ref{fig:evolution_loop} depicts the evolutionary search control loop underlying DyCoT-RE. During each generation, the CoT module generates multiple candidate reward functions, which are evaluated in the environment to compute fitness scores. The top-performing reward is selected for in-depth analysis of subcomponent contributions, guiding subsequent adjustments to temperature and model selection. This closed-loop process continues iteratively until convergence or reaching the predefined computational budget.
 
-\subsection{Dynamic Temperature Regulation (DTRO)}
-DTRO regulates the LLM sampling temperature based on policy entropy $H_t$ and confidence $C_t$. The update rule is:
-\begin{equation}
-\Delta T_t = \beta \Delta T_{t-1} + (1-\beta) \left[\alpha_1 \tanh\left(\frac{H_t - \bar{H}}{\sigma_H}\right) + \alpha_2(C_t - \theta_c)\right]
-\end{equation}
-This mechanism adapts the creativity and determinism of LLM outputs according to policy performance.
+
+
+\subsection{Integrated Optimization}
+
+By jointly modulating sampling temperature and model selection while retaining structured CoT reasoning, DyCoT-RE achieves adaptive reward engineering that aligns generated reward functions with both semantic task requirements and learning dynamics in a transparent and interpretable manner.
+
+\section{Experiments}
+\label{sec:exp}
 
 \begin{figure*}[ht]
     \centering
@@ -249,18 +379,6 @@ This mechanism adapts the creativity and determinism of LLM outputs according to
     \caption{Average reward over training episodes in five environments. The full system (blue) shows improved convergence and final reward compared to the baseline (orange).}
     \label{fig:reward_curve}
 \end{figure*}
-
-\subsection{Dynamic Model Selection (DMSRO)}
-Let $\mathcal{M}$ be a set of candidate models. The selection score for model $m$ is:
-\begin{equation}
-p_{\text{fused}}(m) = (1-\gamma) \cdot p_{\text{local}}(m) + \gamma \cdot p_{\text{hist}}(m)
-\end{equation}
-An $\epsilon$-greedy strategy is applied to explore new models while exploiting high-performing ones.
-
-\section{Experiments}
-\label{sec:exp}
-
-
 
 This section presents the experimental evaluation of the proposed Chain-of-Thought reward generation framework with two adaptive optimization mechanisms: Dynamic Temperature Regulation (DTRO) and Dynamic Model Selection for Reward Optimization (DMSRO). Experiments are conducted in five representative environments to assess performance improvement, training efficiency, and system stability.
 
