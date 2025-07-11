@@ -99,8 +99,9 @@ In this work, we propose DyCoT-RE, a reward engineering framework that integrate
 with dual-dynamic optimization.
 DyCoT-RE applies CoT reasoning throughout the training process to iteratively generate and refine reward functions,
 while incorporating adaptive temperature adjustment based on policy entropy trends,
-and dynamic model selection to assign LLMs with suitable strengths to specific components of reward generation.
+and dynamic model selection to assign LLMs with suitable strengths to specific components of reward generation.\textcolor{red}{TODO: some high level description of the framework/the idea of the framework}
 
+\textcolor{red}{TODO: this part seems to belong to methodology, not belongs to Introduction.}
 Figure~\ref{fig:framework} illustrates the proposed DyCoT-RE framework, 
 which integrates structured Chain-of-Thought (CoT) reasoning with dual-dynamic optimization 
 to automate reward function generation. The framework features an iterative process that 
@@ -179,6 +180,7 @@ Continued research is thus needed to maximize the synergy between LLM capabiliti
 address emerging real-world challenges.
 
 \subsection{Chain-of-Thought Reasoning Methods}
+\textcolor{red}{TODO: PCGRLLM [11] should be in the later part of II.B, instead of II.A. II.B seems a bit long.}
 
 CoT reasoning has emerged as a powerful paradigm to enhance the reasoning capabilities of LLMs. 
 By generating intermediate reasoning steps, CoT allows models to decompose complex problems into interpretable sub-problems, 
@@ -216,7 +218,7 @@ Moreover, generating concise intermediate outputs has enabled state-of-the-art p
 computation overhead \cite{xu2025chain}.
 
 In summary, CoT reasoning has established itself as a fundamental methodology for enhancing the reasoning capacity, 
-interpretability, and robustness of LLMs. Its diverse technical innovations not only improve performance across a wide 
+interpretability, and robustness of LLMs.  \textcolor{red}{TODO: Despite the impressive performance of CoT reasoning, few existing work has explored applying it to reward engineering of RL and only with limited success (Double check this. Maybe limited insight? or something else?). This is a gap that we aim to fill.} Its diverse technical innovations not only improve performance across a wide 
 range of cognitive tasks but also provide theoretical and practical foundations for developing transparent and trustworthy AI 
 systems.
 
@@ -244,7 +246,7 @@ for trillion-parameter models, enabling efficient expert selection.
 ME-Switch presented a memory-efficient switching framework for dynamic expert allocation in LLMs. 
 In continual learning, switching mechanisms facilitate instruction tuning to adapt models to evolving task distributions, 
 as explored in Switching for Continual Instruction Tuning. GLaM \cite{du2022glam} leveraged Mixture-of-Experts (MoE) 
-architectures to scale model capacity dynamically. QLoRA and DyLoRA proposed quantization-aware and low-rank adaptation methods 
+architectures to scale model capacity dynamically. \textcolor{red}{TODO: remove QLoRA and DyLoRA} . QLoRA and DyLoRA proposed quantization-aware and low-rank adaptation methods 
 for efficient parameter tuning and rapid model switching across tasks. 
 Furthermore, LoraHub introduced dynamic LoRA composition to enhance cross-task generalization, while Self-Expansion with Mixture 
 of Adapters \cite{wang2025self} enabled continual learning via adaptive expert composition.
@@ -258,6 +260,7 @@ efficiency. This approach builds upon foundational theories in temperature scali
 to the domain of automated, interpretable reward engineering for reinforcement learning.
 
 \subsection{Differentiation and Contribution of This Work}
+\textcolor{red}{TODO: remove this subsection.}
 
 Despite significant advances in reward engineering, CoT reasoning, and adaptive optimization techniques, 
 existing approaches remain fragmented and task-specific. 
@@ -297,7 +300,10 @@ dynamic tasks.
 
 \section{Methodology}
 
-This section details the proposed DyCoT-RE framework, which integrates structured Chain-of-Thought (CoT) reasoning with a dual-dynamic optimization strategy to generate adaptive and interpretable reward functions for reinforcement learning (RL).
+
+\textcolor{red}{TODO: Make this section longer.}
+
+This section details the proposed DyCoT-RE framework, which integrates structured CoT reasoning with a dual-dynamic optimization strategy to generate adaptive and interpretable reward functions for RL.
 
 \subsection{Framework Overview}
 
@@ -361,6 +367,7 @@ f^* = \arg\max_{f \in F} \mathbb{E}_{z \sim D}[p(f,z)]
 where $z$ is sampled from the task distribution $D$, and $p(f,z)$ is the module-wise performance evaluation. Fused performance combines local performance estimates with global task feedback, ensuring that selected models align with both immediate reward quality and long-term training objectives.
 
 \subsection{Evolutionary Search Loop}
+\textcolor{red}{TODO: Move this into subsection. C Chain-of-Thought Reasoning for Reward Engineering (3), make the notion of evolution less visible but the notion of duo-dynamic optimization more visible.}
 
 Figure~\ref{fig:evolution_loop} depicts the evolutionary search control loop underlying DyCoT-RE. During each generation, the CoT module generates multiple candidate reward functions, which are evaluated in the environment to compute fitness scores. The top-performing reward is selected for in-depth analysis of subcomponent contributions, guiding subsequent adjustments to temperature and model selection. This closed-loop process continues iteratively until convergence or reaching the predefined computational budget.
 
