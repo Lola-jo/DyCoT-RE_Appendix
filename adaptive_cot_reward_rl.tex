@@ -83,14 +83,14 @@ As RL applications grow in complexity, there is a pressing need for methods that
 reward design while maintaining interpretability and flexibility.
 
 Recent advances in large language models (LLMs) have demonstrated strong reasoning and generalization capabilities \cite{brown2020language, ouyang2022training}.
-In particular, Chain-of-Thought (CoT) reasoning enables LLMs to decompose tasks into structured intermediate steps,
-enhancing clarity and alignment with desired objectives \cite{wei2022chain}.
+In particular, CoT reasoning enables LLMs to decompose tasks into structured intermediate steps,
+enhancing clarity and alignment with desired objectives.
 This structured reasoning process can support reward engineering by converting task descriptions
 into executable reward functions in a systematic and transparent manner.
 
 However, existing CoT-based reward generation approaches typically use static sampling parameters and fixed model configurations,
 which may limit their adaptability during training.
-Motivated by recent progress in dynamic temperature adjustment and model selection strategies\cite{zhu2024hot, fedus2022switch},
+Motivated by recent progress in dynamic temperature adjustment and model selection strategies,
 we explore whether integrating adaptive optimization mechanisms into CoT-based reward generation
 can improve reward quality, training stability, and sampling efficiency.
 Dynamic temperature modulation can adjust exploration levels throughout training \cite{zhang2024edt},
@@ -141,12 +141,9 @@ LLMs can interpret high-level task descriptions, extract key objectives, and tra
 This capability facilitates more intuitive alignment with human intentions, reduces engineering overhead, and enhances agent 
 adaptability.
 
-Recent frameworks exemplify this trend. EUREKA \cite{ma2023eureka}, Text2Reward \cite{xie2023text2reward}, 
-CARD \cite{sun2024large}, and PCGRLLM \cite{baek2024pcgrllm} harness LLMs to automatically generate, verify, 
-and refine reward code from natural language instructions. Notably, PCGRLLM extends this capability to procedural content 
-generation tasks, demonstrating that LLM-driven reward design can generalize beyond standard control problems to complex 
-creative domains such as game level generation.
-
+Recent frameworks exemplify this trend. EUREKA \cite{ma2023eureka}, Text2Reward \cite{xie2023text2reward} and
+CARD \cite{sun2024large} harness LLMs to automatically generate, verify, 
+and refine reward code from natural language instructions. 
 
 Beyond static code generation, feedback-driven optimization approaches have emerged. ReMiss \cite{xie2024jailbreaking} 
 utilizes adversarial prompt generation to identify and mitigate reward misspecification vulnerabilities, 
@@ -195,7 +192,7 @@ offers the potential for interpretable, generalizable, and human-aligned RL syst
 \subsection{Dynamic Temperature Adjustment and Model Selection}
 
 Dynamic temperature adjustment and model selection have emerged as critical optimization strategies to enhance the adaptability
-and efficiency of large language model (LLM)-based systems. 
+and efficiency of LLM-based systems. 
 Temperature, as a sampling hyperparameter, controls the stochasticity of LLM outputs, thereby influencing creativity, coherence,
 and exploration-exploitation trade-offs.
 
@@ -203,7 +200,7 @@ Recent studies have systematically explored adaptive temperature mechanisms. Zhu
 temperature sampling for code generation, dynamically adjusting temperatures based on task complexity and model uncertainty 
 to improve generation quality. Cecere et al. \cite{cecere2025monte} introduced Monte Carlo Temperature, a robust sampling 
 strategy for uncertainty quantification, enhancing LLM reliability under distribution shifts. 
-Similarly, Zhang et al. \cite{zhang2024edt} developed Entropy-based Dynamic Temperature (EDT) sampling to regulate model entropy
+Similarly, Zhang et al. developed Entropy-based Dynamic Temperature (EDT) sampling to regulate model entropy
 and output diversity in natural language generation. Peeperkorn et al. \cite{peeperkorn2024temperature} examined 
 temperature's role in creativity modulation, while Evstafev \cite{evstafev2025paradox} highlighted potential limitations 
 in creativity gains versus computational decoupling in structured data generation. Nguyen et al. \cite{nguyen2024turning} 
@@ -215,7 +212,7 @@ task performance within computational constraints. Switch Transformers \cite{fed
 for trillion-parameter models, enabling efficient expert selection. 
 ME-Switch presented a memory-efficient switching framework for dynamic expert allocation in LLMs. 
 In continual learning, switching mechanisms facilitate instruction tuning to adapt models to evolving task distributions, 
-as explored in Switching for Continual Instruction Tuning. GLaM \cite{du2022glam} leveraged Mixture-of-Experts (MoE) 
+as explored in Switching for Continual Instruction Tuning. GLaM leveraged Mixture-of-Experts (MoE) 
 architectures to scale model capacity dynamically. 
 
 Despite these advances, integrating dynamic temperature regulation and model selection within a unified CoT-driven reward 
@@ -254,7 +251,7 @@ First, the CoT Reasoning Module parses task descriptions into structured subgoal
 Second, the Dynamic Temperature Adjustment Module modulates the sampling temperature $T$ of LLM generation based on policy entropy $H_t$ and training feedback. As shown in Figure~\ref{fig:control-flow}, it continuously adjusts the exploration–exploitation trade-off, ensuring generative diversity while maintaining stability during reward code synthesis.
 
 Third, the Dynamic Model Selection Module dynamically routes sub-tasks to specialized LLMs, including:
-the Thinking LLM for semantic parsing and task decomposition, the Code LLM for generating executable reward code, the Repair LLM for correcting code errors detected during training, and the Analysis LLM for evaluating rollout performance and refining sub-reward weights. 
+Thinking, Code, Repair and Analysis LLMs. 
 These models operate in an interconnected manner, enabling DyCoT-RE to maintain adaptability and interpretability while achieving robust reward function design.
 
 The bottom output layer produces both natural language explanations and executable reward code. The generated reward function
@@ -373,7 +370,7 @@ subject to Lyapunov stability conditions:
 
 \subsubsection{Dynamic Model Selection}
 
-In DyCoT-RE, dynamic model selection refers to the adaptive routing of different sub-tasks in the reward engineering pipeline to specialized large language models (LLMs) according to their functional strengths and the current training context.
+In DyCoT-RE, dynamic model selection refers to the adaptive routing of different sub-tasks in the reward engineering pipeline to specialized LLMs according to their functional strengths and the current training context.
 
 Unlike traditional static generation pipelines, DyCoT-RE maintains a pool of four dedicated LLM types:
 
@@ -430,21 +427,33 @@ Through this dynamic routing mechanism, DyCoT-RE effectively utilizes LLM specia
 
 \subsubsection{Joint Adaptive Optimization}
 
-The dual-dynamic mechanisms are coupled in an iterative evolutionary loop:
+The dual-dynamic optimization strategy in DyCoT-RE integrates temperature adjustment and model selection into a cohesive, mutually adaptive system. Rather than operating as isolated components, these mechanisms interact to enhance reward generation quality and training stability in reinforcement learning.
 
-\begin{equation}
-\text{CoT}_{k+1} = \text{Analysis} \circ \text{Repair} \circ \text{Code} \circ \text{Thinking}(\text{CoT}_k),
-\end{equation}
-
-where each iteration $k$ produces:
+At each iteration, the policy entropy $H_t$ and performance feedback $J(\theta)$ are computed to characterize agent behavior and learning progress:
 
 \[
-Output_k = \{w_i^{(k)}, r_i^{(k)}(s,a)\}_{i=1}^{m},
+H_t = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a|s_t) \log \pi_{\theta}(a|s_t), \quad
+J(\theta) = \mathbb{E}_{\pi_\theta}\left[\sum_{k=0}^T \gamma^k R(s_k,a_k)\right].
 \]
 
-evaluated within the RL environment to compute fitness scores. The best-performing design is propagated to the next generation, while temperature modulation adjusts exploration levels and model selection routes tasks based on local-global performance signals.
+The Dynamic Temperature Adjustment module uses these signals to modulate the LLM sampling temperature $T$:
 
-DyCoT-RE thus unifies CoT reasoning with dual-dynamic optimization to generate robust, interpretable, and adaptable reward functions for complex RL tasks, enabling scalable and automated reward engineering.
+\[
+T_{t+1} = T_t + \alpha \left( \frac{\partial T}{\partial H_t} \right),
+\]
+
+thereby balancing exploration diversity and generation stability.
+
+Concurrently, the Dynamic Model Selection module chooses specialized LLMs based on module-specific performance $\hat{p}_j(f_k, z)$ and overall training improvement:
+
+\[
+k_j^* = \arg\max_{k \in M} \left[ \hat{p}_j(f_k, z) + \gamma \cdot J(\theta) \right].
+\]
+
+These two mechanisms operate in synergy: temperature adjustments influence the diversity of generated reward function candidates, shaping inputs for model selection, while model selection decisions affect reward quality and agent learning dynamics, which in turn impact entropy trends guiding temperature updates.
+
+This coupled feedback system enables DyCoT-RE to maintain an adaptive balance between creative reward exploration and stable policy optimization, effectively leveraging LLM specialization while preserving training efficiency and interpretability.
+
 
 
 \section{Experiments}
