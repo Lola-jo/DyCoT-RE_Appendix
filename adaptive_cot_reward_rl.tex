@@ -90,11 +90,9 @@ into executable reward functions in a systematic and transparent manner.
 
 However, existing CoT-based reward generation approaches typically use static sampling parameters and fixed model configurations,
 which may limit their adaptability during training.
-Motivated by recent progress in dynamic temperature adjustment and model selection strategies,
-we explore whether integrating adaptive optimization mechanisms into CoT-based reward generation
-can improve reward quality, training stability, and sampling efficiency.
-Dynamic temperature modulation can adjust exploration levels throughout training \cite{zhang2024edt},
-while model selection strategies can allocate LLMs with specialized capabilities to different reward generation tasks \cite{du2022glam}.
+Recent studies have emphasized the need for dynamic adaptation in LLM-based systems to improve sample efficiency, stability, and alignment with task objectives.
+For example, Nguyen et al. \cite{nguyen2024turning} demonstrate that min-p sampling enhances creativity while preserving coherence in narrative generation tasks, while Peeperkorn et al. \cite{peeperkorn2024temperature} analyze temperature as a direct modulator of LLM creativity.
+Moreover, Fedus et al. \cite{fedus2022switch} and Du et al. \cite{du2022glam} show that mixture-of-experts architectures can scale model capacity efficiently via adaptive routing, motivating our exploration of combining temperature modulation with expert model selection for reward engineering.
 
 In this work, we propose DyCoT-RE, a reward engineering framework that integrates structured CoT reasoning
 with dual-dynamic optimization.
@@ -106,10 +104,12 @@ By tightly coupling these components within a closed-loop evolutionary search pr
 DyCoT-RE systematically improves reward function quality and training efficiency,
 ultimately enabling scalable, interpretable, and automated reward engineering for complex RL environments.
 
+We evaluate DyCoT-RE on the standard RL environments CartPole, BipedalWalker, and Ant to demonstrate its effectiveness.
+However, recent studies have raised concerns that large language models may carry prior knowledge from pretraining data about these standard environments, 
+leading to potential prompt leakage and evaluation biases \cite{huang2025thinkbench, qi2024quantifying, lu2024mental}. 
+To address this issue, we additionally design a custom SpaceMining environment to assess DyCoT-RE's true generalization capabilities on tasks free from such pretrained knowledge.
+Experimental results show that DyCoT-RE consistently achieves higher average rewards and faster convergence compared to baseline and non-CoT methods.
 
-We evaluate DyCoT-RE on four standard RL environments—CartPole, BipedalWalker, and Ant—
-as well as a custom SpaceMining environment.
-Results show that DyCoT-RE achieves improved average rewards and faster convergence compared to baselines and non-CoT methods.
 
 The remainder of this paper is organized as follows.
 Section II reviews related work in reward engineering, LLM-based reward generation, and adaptive optimization.
@@ -156,7 +156,7 @@ guiding future improvements.
 
 Overall, LLM-based reward engineering represents a paradigm shift. 
 By integrating natural language reasoning and dynamic feedback optimization, 
-these methods offer scalable, adaptable, and human-aligned reward generation pipelines. 
+these methods offer scalable reward generation pipelines. 
 As tasks grow in complexity and diversity, leveraging LLMs to bridge the gap between human 
 intent and machine learning objectives will be critical for the next generation of intelligent systems. 
 Continued research is thus needed to maximize the synergy between LLM capabilities and RL frameworks to 
@@ -185,8 +185,8 @@ validating its effectiveness in standard benchmark tasks. However, these applica
 reward generation pipelines without incorporating adaptive optimization or dynamic model selection mechanisms.
 
 In summary, while CoT reasoning has established itself as a fundamental methodology enhancing LLM interpretability and reasoning capacity, 
-its application to automated reward engineering in RL remains limited. Bridging this gap by integrating CoT with dynamic optimization 
-offers the potential for interpretable, generalizable, and human-aligned RL systems.
+its application to automated reward engineering in RL remains limited. Bridging this gap by integrating CoT reasoning with dynamic 
+optimization holds promise for enhancing the interpretability and adaptability of RL systems.
 
 
 \subsection{Dynamic Temperature Adjustment and Model Selection}
@@ -196,32 +196,31 @@ and efficiency of LLM-based systems.
 Temperature, as a sampling hyperparameter, controls the stochasticity of LLM outputs, thereby influencing creativity, coherence,
 and exploration-exploitation trade-offs.
 
-Recent studies have systematically explored adaptive temperature mechanisms. Zhu et al. \cite{zhu2024hot} proposed adaptive 
-temperature sampling for code generation, dynamically adjusting temperatures based on task complexity and model uncertainty 
-to improve generation quality. Cecere et al. \cite{cecere2025monte} introduced Monte Carlo Temperature, a robust sampling 
-strategy for uncertainty quantification, enhancing LLM reliability under distribution shifts. 
-Similarly, Zhang et al. developed Entropy-based Dynamic Temperature (EDT) sampling to regulate model entropy
-and output diversity in natural language generation. Peeperkorn et al. \cite{peeperkorn2024temperature} examined 
-temperature's role in creativity modulation, while Evstafev \cite{evstafev2025paradox} highlighted potential limitations 
-in creativity gains versus computational decoupling in structured data generation. Nguyen et al. \cite{nguyen2024turning} 
-proposed min-p sampling, adjusting temperature to balance creativity and coherence, achieving state-of-the-art performance 
-in narrative generation.
+Recent studies have systematically explored adaptive temperature mechanisms. Zhu et al. \cite{zhu2024hot} proposed AdapT, 
+an adaptive temperature sampling strategy for code generation tasks, which dynamically adjusts decoding temperature based on token-level 
+difficulty to improve generation quality. Zhang et al. \cite{zhang2024edt} developed Entropy-based Dynamic Temperature (EDT) sampling to
+regulate output entropy and diversity in natural language generation, while Cecere et al. \cite{cecere2025monte} introduced Monte Carlo 
+Temperature as a robust sampling strategy to enhance uncertainty quantification under distribution shifts. Chang et al. \cite{chang2023kl} l
+everaged KL-divergence-guided temperature sampling to modulate exploration adaptively. Additionally, Peeperkorn et al. \cite{peeperkorn2024temperature} 
+analyzed temperature as a creativity modulator in LLMs, whereas Evstafev \cite{evstafev2025paradox} discussed potential limitations of temperature-based 
+stochasticity in structured data generation. Nguyen et al. \cite{nguyen2024turning} proposed min-p sampling to balance creativity and coherence, 
+achieving improved narrative generation performance.
 
-Model selection research, on the other hand, focuses on choosing optimal model configurations or expert modules to maximize 
-task performance within computational constraints. Switch Transformers \cite{fedus2022switch} introduced sparse activation 
-for trillion-parameter models, enabling efficient expert selection. 
-ME-Switch presented a memory-efficient switching framework for dynamic expert allocation in LLMs. 
-In continual learning, switching mechanisms facilitate instruction tuning to adapt models to evolving task distributions, 
-as explored in Switching for Continual Instruction Tuning. GLaM leveraged Mixture-of-Experts (MoE) 
-architectures to scale model capacity dynamically. 
 
-Despite these advances, integrating dynamic temperature regulation and model selection within a unified CoT-driven reward 
-engineering framework remains underexplored. Existing temperature adaptation methods primarily focus on text generation 
-diversity and confidence calibration, whereas model selection research emphasizes computational efficiency and task 
-specialization. Our work addresses this gap by combining entropy- and reward-feedback-based temperature adjustment 
-with local-global performance-based model routing to enhance RL reward generation's adaptability, stability, and sample 
-efficiency. This approach builds upon foundational theories in temperature scaling and expert selection, extending them 
-to the domain of automated, interpretable reward engineering for reinforcement learning.
+For model selection, recent work has focused on choosing optimal model configurations or expert modules to maximize task performance within computational constraints. 
+Switch Transformers \cite{fedus2022switch} introduced sparse activation mechanisms, enabling efficient expert selection at trillion-parameter scale, 
+while GLaM \cite{du2022glam} leveraged Mixture-of-Experts (MoE) architectures to dynamically scale model capacity. 
+Zhou et al. \cite{zhou2022mixture} proposed expert choice routing to improve mixture-of-experts efficiency, and Li et al. \cite{li2025llm} introduced 
+preference-conditioned dynamic routing for cost-efficient LLM generation. Hu et al. \cite{hu2024dynamic} presented Dynamic Ensemble Reasoning to integrate outputs 
+from multiple specialized LLMs, enhancing system robustness. Nakaishi et al. \cite{nakaishi2024critical} further revealed phase transition behaviors in LLM sampling regimes, 
+informing temperature scaling strategies. Furthermore, Li et al. \cite{li2025revisiting} revisited self-consistency decoding from a distributional alignment perspective, 
+offering insights relevant to expert aggregation and answer aggregation stability.
+
+Despite these advances, integrating dynamic temperature regulation and model selection within a unified CoT-driven reward engineering framework remains underexplored. 
+Existing temperature adaptation methods primarily focus on text generation diversity and calibration, whereas model selection research emphasizes computational efficiency 
+and specialization. Our work addresses this gap by combining entropy- and reward-feedback-based temperature adjustment with local-global performance-based model 
+routing to enhance RL reward generation's adaptability, stability, and sample efficiency. This approach builds upon foundational theories in temperature scaling and expert 
+selection, extending them to the domain of automated, interpretable reward engineering for reinforcement learning.
 
 
 \section{Methodology}
@@ -256,9 +255,9 @@ These models operate in an interconnected manner, enabling DyCoT-RE to maintain 
 
 The bottom output layer produces both natural language explanations and executable reward code. The generated reward function
 
-\[
+\begin{equation}
 R(s,a) = \sum_{i=1}^{m} w_i r_i(s,a)
-\]
+\end{equation}
 
 is tested within the RL environment, where performance metrics such as average episode reward, variance, and convergence rate are recorded. Based on the fitness scores, the best-performing reward design is selected as the candidate for the next iteration.
 
@@ -337,25 +336,29 @@ $H_t$ the policy entropy, and $\Delta T_t$ the temperature adjustment. The entro
 
 \begin{equation}
 H_t = - \sum_{i=1}^{n} p_i \log p_i,
+\label{eq:entropy}
 \end{equation}
 
 where $p_i$ are normalized probabilities over action selections. The temperature update follows:
 
 \begin{equation}
 T_{t+1} = T_t + \alpha \frac{\partial T}{\partial H_t} \Delta t,
+\label{eq:temp_update}
 \end{equation}
 
 with $\alpha$ as the learning rate. The adjustment logic satisfies:
 
-\[
+\begin{equation}
 T_{t+1} = 
 \begin{cases}
 T_t + \eta_1 (H_t - H_{target}), & \text{if } H_t > H_{target} \\
 T_t - \eta_2 (H_{target} - H_t), & \text{otherwise},
 \end{cases}
-\]
+\end{equation}
 
-where $\eta_1,\eta_2$ are adaptation gains controlling exploration-exploitation balance. The optimal control seeks to maximize:
+(see also Eq.~\eqref{eq:temp_update}).
+
+The optimal control seeks to maximize:
 
 \begin{equation}
 \max_{T} \mathbb{E} \left[ \sum_{t=0}^{\tau} \gamma^t R_t \right],
@@ -375,50 +378,54 @@ In DyCoT-RE, dynamic model selection refers to the adaptive routing of different
 Unlike traditional static generation pipelines, DyCoT-RE maintains a pool of four dedicated LLM types:
 
 \begin{enumerate}
-    \item \textbf{Thinking LLM} focuses on semantic parsing, environment understanding, and task decomposition. It processes natural language descriptions to identify structured subgoals and relevant state-action variables for reward formulation.
+    \item \textbf{Thinking LLM} ($\mathcal{M}_{\text{think}}$) focuses on semantic parsing, environment understanding, and task decomposition. It processes natural language descriptions to identify structured subgoals and relevant state-action variables for reward formulation, as in Eq.~\eqref{eq:thinkingllm}.
     
-    \item \textbf{Code LLM} specializes in synthesizing executable reward functions based on decomposed subgoals and prior analysis feedback. It generates Python functions that compute each sub-reward $r_i(s,a)$ and their weighted aggregation into the final reward $R(s,a)$.
+    \item \textbf{Code LLM} ($\mathcal{M}_{\text{code}}$) specializes in synthesizing executable reward functions based on decomposed subgoals and prior analysis feedback, as in Eq.~\eqref{eq:reward_agg}.
     
-    \item \textbf{Repair LLM} is activated when code execution errors arise during environment evaluation. It diagnoses exceptions such as dimension mismatches or undefined variables and generates corrected code snippets, enabling seamless resumption of the training loop.
+    \item \textbf{Repair LLM} ($\mathcal{M}_{\text{repair}}$) is activated when code execution errors arise during environment evaluation, as in Eq.~\eqref{eq:repairllm}.
     
-    \item \textbf{Analysis LLM} evaluates reward candidate performance, computes gradients for sub-reward weight updates, and recommends adjustments to the CoT decomposition or temperature modulation strategies based on observed policy learning trends.
+    \item \textbf{Analysis LLM} ($\mathcal{M}_{\text{analysis}}$) evaluates reward candidate performance, computes gradients for sub-reward weight updates, and recommends adjustments, as in Eq.~\eqref{eq:analysisllm}.
 \end{enumerate}
 
 Dynamic model selection within DyCoT-RE governs the allocation of reward engineering sub-tasks to these four specialized LLMs. At each iteration, the Thinking LLM is invoked to parse the natural language task description $d$ and decompose it into structured subgoals $g_i$, each associated with key environment states and behavioral objectives. Mathematically, this semantic parsing can be conceptualized as:
 
-\[
-g_i = \text{ThinkingLLM}(d, E),
-\]
+\begin{equation}
+g_i = \mathcal{M}_{\text{think}}(d, E),
+\label{eq:thinkingllm}
+\end{equation}
 
 where $E$ denotes the environment specification.
 
 The subgoals $g_i$ are then passed to the Code LLM, which generates executable reward functions by translating each subgoal into a sub-reward component $r_i(s,a)$ and composing them into the final aggregated reward:
 
-\[
+\begin{equation}
 R(s,a) = \sum_{i=1}^{m} w_i r_i(s,a),
-\]
+\label{eq:reward_agg}
+\end{equation}
 
 where weights $w_i$ are initialized based on LLM-inferred subgoal priority and iteratively refined through performance analysis.
 
 During execution within the RL environment, if runtime errors occur (e.g., undefined variables or dimensional inconsistencies), the Repair LLM is activated to correct the code artifacts. Formally, given an error trace $e$ and original code $c$, the Repair LLM generates an updated implementation:
 
-\[
-c' = \text{RepairLLM}(e, c).
-\]
+\begin{equation}
+c' = \mathcal{M}_{\text{repair}}(e, c).
+\label{eq:repairllm}
+\end{equation}
 
 Post-execution, the Analysis LLM evaluates policy performance by calculating rollout-based metrics such as expected cumulative reward $J(\theta)$ and reward variance $\sigma_R^2$. It then recommends updates to sub-reward weights to improve task alignment and convergence efficiency:
 
-\[
+\begin{equation}
 w_i^{(t+1)} = w_i^{(t)} + \eta \frac{\partial J(\theta)}{\partial w_i} - \lambda \sum_{j \neq i} \rho_{ij},
-\]
+\label{eq:analysisllm}
+\end{equation}
 
 where $\rho_{ij}$ represents the Pearson correlation coefficient between sub-reward components to penalize redundancy, and $\eta, \lambda$ are learning rate and regularization hyperparameters, respectively.
 
 Model selection decisions are driven by maximizing estimated module-wise performance $\hat{p}_j(f_k, z)$ for each task input $z$, yielding:
 
-\[
+\begin{equation}
 k_j^* = \arg\max_{k \in M} \hat{p}_j(f_k, z),
-\]
+\end{equation}
 
 where $k_j^*$ is the optimal model choice for module $j$ from candidate set $M$.
 
@@ -427,48 +434,126 @@ Through this dynamic routing mechanism, DyCoT-RE effectively utilizes LLM specia
 
 \subsubsection{Joint Adaptive Optimization}
 
-The dual-dynamic optimization strategy in DyCoT-RE integrates temperature adjustment and model selection into a cohesive, mutually adaptive system. Rather than operating as isolated components, these mechanisms interact to enhance reward generation quality and training stability in reinforcement learning.
+The dual-dynamic optimization strategy in DyCoT-RE integrates temperature adjustment and model selection into a closed-loop, mutually adaptive system to enhance reward function quality and training efficiency. Unlike independent application of these mechanisms, their joint operation forms a synergistic optimization pathway aligning language model sampling dynamics with reinforcement learning objectives.
 
-At each iteration, the policy entropy $H_t$ and performance feedback $J(\theta)$ are computed to characterize agent behavior and learning progress:
+At each iteration $t$, the Thinking LLM decomposes the task description into structured subgoals, producing an initial reward design $R_t(s,a)$. This design is passed to the Code LLM to generate executable Python code for environment evaluation. During agent training with policy $\pi_{\theta}$, the policy entropy $H_t$ is computed as:
 
-\[
-H_t = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a|s_t) \log \pi_{\theta}(a|s_t), \quad
-J(\theta) = \mathbb{E}_{\pi_\theta}\left[\sum_{k=0}^T \gamma^k R(s_k,a_k)\right].
-\]
+\begin{equation}
+H_t = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a|s_t) \log \pi_{\theta}(a|s_t),
+\end{equation}
 
-The Dynamic Temperature Adjustment module uses these signals to modulate the LLM sampling temperature $T$:
+quantifying exploration stochasticity. Simultaneously, rollout-based performance metrics, including expected return $J(\theta)$ and reward variance $\sigma_R^2$, are monitored:
 
-\[
-T_{t+1} = T_t + \alpha \left( \frac{\partial T}{\partial H_t} \right),
-\]
+\begin{equation}
+J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \sum_{k=0}^{T} \gamma^k R(s_k,a_k) \right],
+\end{equation}
+\begin{equation}
+\sigma_R^2 = \mathbb{E}[(R - \mathbb{E}[R])^2].
+\end{equation}
 
-thereby balancing exploration diversity and generation stability.
+The Dynamic Temperature Adjustment module uses these feedback signals to update the sampling temperature $T$ according to:
 
-Concurrently, the Dynamic Model Selection module chooses specialized LLMs based on module-specific performance $\hat{p}_j(f_k, z)$ and overall training improvement:
+\begin{equation}
+T_{t+1} = T_t + \alpha \left( \frac{\partial T}{\partial H_t} \Delta t \right),
+\end{equation}
 
-\[
-k_j^* = \arg\max_{k \in M} \left[ \hat{p}_j(f_k, z) + \gamma \cdot J(\theta) \right].
-\]
+where $\alpha$ is the learning rate controlling update smoothness, and $\frac{\partial T}{\partial H_t}$ represents sensitivity of temperature to entropy deviation from the target. Higher policy entropy relative to the target increases $T$, promoting more diverse LLM generations to facilitate exploration, while lower entropy triggers a temperature decrease to stabilize sampling outputs.
 
-These two mechanisms operate in synergy: temperature adjustments influence the diversity of generated reward function candidates, shaping inputs for model selection, while model selection decisions affect reward quality and agent learning dynamics, which in turn impact entropy trends guiding temperature updates.
+Concurrently, the Dynamic Model Selection module evaluates module-wise performance of candidate LLMs based on local quality estimations $\hat{p}_j(f_k, z)$ and global training improvements:
 
-This coupled feedback system enables DyCoT-RE to maintain an adaptive balance between creative reward exploration and stable policy optimization, effectively leveraging LLM specialization while preserving training efficiency and interpretability.
+\begin{equation}
+k_j^* = \arg\max_{k \in M} \left[ \hat{p}_j(f_k, z) + \gamma \cdot J(\theta) \right],
+\end{equation}
+
+where $\gamma$ controls the influence of global reward performance on model routing decisions.
+
+Critically, these two dynamic adjustments interact adaptively. Temperature adjustment influences the sampling diversity of the Code LLM, affecting candidate reward variants’ distribution and consequently altering the inputs for model selection. Conversely, model selection decisions affect the generation quality and robustness of reward functions, which modulate agent behavior, impacting policy entropy and subsequent temperature updates.
+
+This mutual adaptation forms a coupled optimization system expressed abstractly as:
+
+\begin{equation}
+\begin{cases}
+T_{t+1} = f_T(H_t, J(\theta), \sigma_R^2), \\
+k_j^* = g_k(T_t, \hat{p}_j(f_k, z), J(\theta)),
+\end{cases}
+\end{equation}
+
+where $f_T$ and $g_k$ denote the temperature update and model selection policies, respectively.
+
+To ensure convergence and stability, a Lyapunov-based condition is enforced:
+
+\begin{equation}
+\frac{\partial^2 T}{\partial H^2}
++ \frac{\partial^2 T}{\partial C^2}
+\leq \frac{2}{\eta} \left( \frac{\partial R}{\partial T} \right)^2,
+\end{equation}
+
+with $\eta$ representing a Lipschitz constant bounding system gradients. This guarantees that the joint temperature-model adjustment does not induce oscillatory divergence during training.
+
+Overall, this integrated dual-dynamic optimization framework enables DyCoT-RE to adaptively balance exploration and exploitation while efficiently leveraging specialized LLM capabilities for interpretable reward function generation across diverse RL tasks.
 
 
 
-\section{Experiments}
-\label{sec:exp}
 
-\begin{figure*}[ht]
-    \centering
-    \includegraphics[width=0.95\textwidth]{./Figures/reward_episode_curve.png}
-    \caption{Average reward over training episodes in five environments. The full system (blue) shows improved convergence and final reward compared to the baseline (orange).}
-    \label{fig:reward_curve}
-\end{figure*}
+\subsection{Experimental Setup}
 
-This section presents the experimental evaluation of the proposed Chain-of-Thought reward generation framework with two adaptive optimization mechanisms: Dynamic Temperature Regulation (DTRO) and Dynamic Model Selection for Reward Optimization (DMSRO). Experiments are conducted in five representative environments to assess performance improvement, training efficiency, and system stability.
+\subsubsection{Environments}
 
-The experiments include the following environments: CartPole (control task), MountainCar (sparse reward task), BipedalWalker (locomotion task), Ant (high-dimensional locomotion task), and SpaceMining (a custom-designed single-agent mining environment). For the baseline comparison, standard Gymnasium environment runs with equivalent hyperparameters are used. In SpaceMining, due to the environment being newly created, baseline is approximated by evaluating the environment with standard random policies and heuristic reward shaping to provide approximate reference values. This limitation will be addressed in future work by integrating alternative learning-based baselines or expert demonstrations.
+We evaluate DyCoT-RE on four representative reinforcement learning environments to cover a wide range of task difficulties, action spaces, and generalization challenges. 
+The standard benchmarks include CartPole, BipedalWalker, and Ant, which span from discrete control tasks to high-dimensional continuous control with complex locomotion dynamics. 
+In addition, we design a custom SpaceMining environment as a multi-agent resource collection task to assess generalization beyond pretrained knowledge from standard benchmarks.
+
+All environments are implemented based on the Gymnasium platform. For CartPole, BipedalWalker, and Ant, we adopt the official Gymnasium reward functions as the human-designed baseline rewards. 
+For SpaceMining, as no official baseline reward exists, we implement a manually designed heuristic reward function emphasizing resource mining efficiency and collision avoidance 
+to serve as a baseline. While simple hand-crafted rewards can establish reference performance, they may fail to capture nuanced task objectives in complex custom environments, 
+highlighting the need for automated and interpretable reward engineering.
+
+\subsubsection{Baselines}
+
+We compare DyCoT-RE against three categories of baselines: 
+(1) human-designed rewards derived from Gymnasium's native reward formulations or manually implemented heuristics for SpaceMining; 
+(2) LLM-based reward generation without chain-of-thought (CoT) reasoning, using direct zero-shot prompting to synthesize reward functions; 
+and (3) single-dynamic optimization variants, which include DyCoT-RE with only dynamic temperature adjustment and DyCoT-RE with only dynamic model selection, 
+to evaluate the individual contributions of each module.
+
+\subsubsection{Implementation Details}
+
+All experiments are conducted using the PPO algorithm implemented via the Stable-Baselines3 framework, running on local servers equipped with NVIDIA GPUs. 
+The training configuration is adapted to the complexity of each environment, including maximum episode steps, total training steps, number of parallel 
+environments, and CoT-based reward generation iterations, as summarized in Table~\ref{tab:env_settings}.
+
+\begin{table}[ht]
+\centering
+\caption{Environment-specific experimental settings and parameters}
+\label{tab:env_settings}
+\begin{tabular}{lcccc}
+\hline
+Environment & Max Steps & Total Steps & Parallel Env & CoT Iter\\
+\hline
+CartPole-v1 & 500 & $1 \times 10^4$ & 4 & 5 \\
+MountainCarContinuous-v0 & 999 & $1 \times 10^6$ & 4 & 6 \\
+BipedalWalker-v3 & 1600 & $1 \times 10^6$ & 10 & 8 \\
+Ant-v5 & 1600 & $5 \times 10^6$ & 10 & 8 \\
+SpaceMining & 1600 & $3 \times 10^6$ & 8 & 8 \\
+\hline
+\end{tabular}
+\end{table}
+
+For policy network architectures, single-agent tasks use a two-layer multilayer perceptron with [64, 64] units and ReLU activations, 
+with separate networks for the policy and value function. For the SpaceMining multi-agent environment, a larger network of [256, 256, 128] is employed 
+to handle higher-dimensional state representations and coordination strategies.
+
+All models are trained with the Adam optimizer. The learning rate is set to 0.0003 (except MountainCarContinuous, which uses 0.0001), batch size is 64, 
+rollout buffer size is 2048, and each PPO update includes 10 epochs. The discount factor $\gamma$ is 0.999 for most environments (0.99 for SpaceMining), 
+generalized advantage estimation (GAE) lambda is 0.95, clip range is 0.2, and value function loss coefficient is 0.5.
+
+Reward function generation leverages the DyCoT-RE system with a local LLM backend deployed via Ollama. Each CoT iteration generates 8 candidate rewards 
+in parallel, with temperature set to 0.6 for controlled diversity. No initial prompt templates are provided, promoting purely exploratory reward generation.
+
+For final evaluation, all tasks are tested across 10 episodes with different random seeds. The best-performing policies are visualized as GIF animations 
+for qualitative analysis. GPU memory management employs an automatic clearance mechanism to release resources when utilization exceeds 60\% or computation 
+load surpasses 90\%, enabling seamless device switching and minimizing runtime interruptions.
+
 
 \subsection{Overall Reward Performance}
 
