@@ -492,7 +492,7 @@ with $\eta$ representing a Lipschitz constant bounding system gradients. This gu
 
 Overall, this integrated dual-dynamic optimization framework enables DyCoT-RE to adaptively balance exploration and exploitation while efficiently leveraging specialized LLM capabilities for interpretable reward function generation across diverse RL tasks.
 
-
+\section{Experiments}
 
 
 \subsection{Experimental Setup}
@@ -531,7 +531,6 @@ environments, and CoT-based reward generation iterations, as summarized in Table
 Environment & Max Steps & Total Steps & Parallel Env & CoT Iter\\
 \hline
 CartPole-v1 & 500 & $1 \times 10^4$ & 4 & 5 \\
-MountainCarContinuous-v0 & 999 & $1 \times 10^6$ & 4 & 6 \\
 BipedalWalker-v3 & 1600 & $1 \times 10^6$ & 10 & 8 \\
 Ant-v5 & 1600 & $5 \times 10^6$ & 10 & 8 \\
 SpaceMining & 1600 & $3 \times 10^6$ & 8 & 8 \\
@@ -555,9 +554,55 @@ for qualitative analysis. GPU memory management employs an automatic clearance m
 load surpasses 90\%, enabling seamless device switching and minimizing runtime interruptions.
 
 
-\subsection{Overall Reward Performance}
+\subsection{Overall Performance}
 
-Figure \ref{fig:reward_curve} shows the average reward curves over training episodes for the full system compared to the baseline in each environment. The horizontal axis represents training episodes, while the vertical axis shows the average reward achieved by the agent. Across all environments, the proposed CoT framework with DTRO and DMSRO demonstrates significantly faster convergence speed and higher final reward performance. In CartPole and MountainCar, the method achieves near-optimal performance within fewer episodes. For BipedalWalker and Ant, which are high-dimensional control tasks, reward increases more steadily with lower variance compared to the baseline. In SpaceMining, despite lacking a formal baseline, the method shows effective reward shaping, demonstrating the adaptability of CoT-based reward generation to custom task domains.
+This section summarizes the overall performance of DyCoT-RE compared to baseline methods across four 
+representative reinforcement learning environments: CartPole, BipedalWalker, Ant, and SpaceMining.
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{Figures/reward_episode_curve.png}
+    \caption{DyCoT-RE vs Human-designed}
+    \label{fig:learning_curves}
+\end{figure*}
+
+Figure~\ref{fig:learning_curves} shows the average fitness score curves over training timesteps for DyCoT-RE (blue) 
+and Human-designed reward functions (green). In all environments, DyCoT-RE achieves superior final rewards with faster convergence. 
+Specifically, in the Ant task, both methods initially exhibit performance drops due to exploration instability, 
+but DyCoT-RE rapidly recovers after approximately 1.2M steps, eventually surpassing 3000 points, while Human-designed rewards 
+plateau at significantly lower scores. Similar trends are observed in BipedalWalker, where DyCoT-RE demonstrates both higher 
+early-stage stability and superior final performance, achieving near 300 points compared to suboptimal results from human-designed rewards.
+
+In CartPole, a classic discrete control task, DyCoT-RE reaches higher performance plateaus faster, exhibiting stepwise increases 
+characteristic of milestone-based rewards, and outperforms human-designed rewards by a substantial margin in both learning speed and 
+final stability. In the SpaceMining environment, designed to test generalization beyond standard benchmarks, DyCoT-RE again shows a 
+marked advantage, achieving rewards close to 2000 while human-designed rewards remain lower and flatter.
+
+Figure~\ref{fig:bar_comparison} further quantifies the final performance across methods and environments. 
+The bar chart compares five reward generation approaches: Human-designed rewards, LLM-based non-CoT reward generation, 
+DyCoT-RE without model selection, DyCoT-RE without temperature adjustment, and full DyCoT-RE. 
+Across all four environments, full DyCoT-RE consistently achieves the highest rewards.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.48\textwidth]{Figures/bar_comparison.png}
+    \caption{Final average rewards across environments for Human-designed, LLM-based non-CoT, DyCoT-RE ablations, and full DyCoT-RE.}
+    \label{fig:bar_comparison}
+\end{figure}
+
+In CartPole, full DyCoT-RE reaches 475.3, outperforming non-CoT LLM-based generation (388.4) and human-designed rewards (315.3). 
+In BipedalWalker, DyCoT-RE achieves 260.8 versus 215.3 for human-designed. Notably, in Ant, where reward complexity is higher, 
+full DyCoT-RE yields 2100.5, significantly exceeding both non-CoT LLM-based rewards (900.9) and human-designed (190.9). 
+The SpaceMining task results align with these trends, where DyCoT-RE reaches 1782.0 compared to human-designed (1158.7).
+
+Ablation comparisons highlight the critical contributions of both dynamic model selection and temperature adjustment. 
+Removing either component results in decreased performance across environments, demonstrating that these dual dynamic optimization 
+strategies synergistically enhance the reward generation quality, exploration-exploitation balance, and training stability of DyCoT-RE.
+
+Overall, these experiments demonstrate that DyCoT-RE significantly outperforms human-designed and LLM-based non-CoT rewards in both 
+learning efficiency and final policy performance, validating the effectiveness of integrating Chain-of-Thought reasoning with dynamic 
+optimization mechanisms for automated reward engineering in reinforcement learning.
 
 
 
