@@ -14,6 +14,7 @@
 \usepackage{booktabs}
 \usepackage{makecell}
 \usepackage{multirow}
+\usepackage{svg}
 
 \DeclareRobustCommand*{\IEEEauthorrefmark}[1]{%
     \raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{#1}}}}
@@ -575,7 +576,7 @@ This section summarizes the performance of DyCoT-RE compared to baselines across
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.85\linewidth]{Figures/reward_episode_curve.png}
+\includegraphics[width=0.85\linewidth]{Figures/reward_episode_curve_1.pdf}
 \caption{Learning curves of DyCoT-RE (blue) vs Human-designed rewards (green) across training timesteps.}
 \label{fig:learning_curves}
 \end{figure*}
@@ -599,7 +600,7 @@ This indicates that DyCoT-RE’s adaptive reward generation can extract useful s
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.48\textwidth]{Figures/bar_comparison_3.png}
+\includegraphics[width=0.48\textwidth]{Figures/bar_comparison_5.pdf}
 \caption{Final average rewards across environments comparing Human-designed, Eureka, and DyCoT-RE.}
 \label{fig:bar_comparison}
 \end{figure}
@@ -623,7 +624,7 @@ We evaluate the impact of incorporating Chain-of-Thought (CoT) reasoning into re
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.48\textwidth]{Figures/cot_ablation.png}
+\includegraphics[width=0.48\textwidth]{Figures/cot_ablation_1.pdf}
 \caption{Final reward distributions for CoT-enabled vs zero-shot reward generation across environments.}
 \label{fig:cot_ablation}
 \end{figure}
