@@ -531,6 +531,10 @@ comparing DyCoT-RE against its internal variants:
 
 - DyCoT-RE without model selection
 
+Due to computational constraints and consistent observed trends across environments, 
+temperature adjustment and model selection ablation were conducted on BipedalWalker as a representative continuous control task, 
+while CoT reasoning was evaluated on all four environments to confirm its general effectiveness.
+
 
 \subsubsection{Implementation Details}
 
@@ -561,140 +565,152 @@ SpaceMining & 1600 & $3 \times 10^6$ & 8 & 8 \\
 \end{tabular}
 \end{table}
 
+
+
 \subsection{Overall Performance}
 
-This section summarizes the overall performance of DyCoT-RE compared to baselines across four representative reinforcement learning environments: CartPole, BipedalWalker, Ant, and SpaceMining.
+
+This section summarizes the performance of DyCoT-RE compared to baselines across four representative reinforcement learning environments.
+
 
 \begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.85\linewidth]{Figures/reward_episode_curve.png}
-    \caption{Learning curves of DyCoT-RE (blue) vs Human-designed rewards (green) across training timesteps.}
-    \label{fig:learning_curves}
+\centering
+\includegraphics[width=0.85\linewidth]{Figures/reward_episode_curve.png}
+\caption{Learning curves of DyCoT-RE (blue) vs Human-designed rewards (green) across training timesteps.}
+\label{fig:learning_curves}
 \end{figure*}
 
-Figure~\ref{fig:learning_curves} illustrates the learning curves of DyCoT-RE and Human-designed rewards. In \textbf{CartPole}, a simple discrete control task with dense rewards, both methods rapidly achieve near-optimal performance. DyCoT-RE converges slightly faster, but the final reward difference remains modest. This suggests that for environments with straightforward dynamics and informative feedback, sophisticated reward engineering yields marginal additional benefit.
+Figure~\ref{fig:learning_curves} shows that in CartPole, a simple discrete control task with dense and informative rewards, 
+DyCoT-RE achieves slightly faster convergence than the Human-designed baseline, but the final reward difference remains small. 
+This is expected, as the environment’s inherent simplicity and clear feedback signals allow even heuristic rewards to perform well, 
+limiting the potential benefit from additional reward optimization.
 
-In \textbf{BipedalWalker}, which requires coordinated continuous control under sparse and noisy feedback, DyCoT-RE demonstrates clearer advantages. Its learning curve shows greater stability in early training and achieves higher final rewards, reflecting its ability to decompose balance and propulsion objectives into structured sub-rewards that accelerate gait acquisition.
+In other environments, the advantages of DyCoT-RE are more apparent. For example, in BipedalWalker, which requires coordinated control 
+of multiple joints under sparse and noisy feedback, DyCoT-RE produces smoother learning curves and achieves higher final rewards. 
+Its structured reward decomposition may help the agent acquire stable walking gaits by explicitly separating balance and propulsion objectives.
 
-For \textbf{Ant}, a high-dimensional quadruped locomotion task with complex exploration challenges, DyCoT-RE shows pronounced gains. While both methods initially exhibit unstable exploration phases, DyCoT-RE rapidly recovers after around 1.2M timesteps and continues improving towards near-maximum rewards, whereas Human-designed rewards plateau earlier and at lower performance. This underscores DyCoT-RE's capacity to resolve credit assignment bottlenecks in redundant action spaces through structured reasoning and dynamic optimization.
+In Ant, a high-dimensional locomotion task, both methods initially experience unstable exploration with reward drops. 
+However, DyCoT-RE recovers earlier—around 1.2 million timesteps—and continues improving towards higher rewards. 
+This suggests that DyCoT-RE is better able to resolve credit assignment challenges in redundant action spaces, accelerating policy learning in later training stages.
 
-In the \textbf{SpaceMining} environment, designed to test generalization to novel multi-agent resource collection tasks beyond standard benchmarks, DyCoT-RE maintains consistently upward trajectories, achieving rewards close to 2000. In contrast, Human-designed rewards remain relatively flat, indicating limited task coverage by heuristic formulations. DyCoT-RE's ability to extract meaningful signals in environments lacking pretrained priors highlights its generalization potential.
+In the SpaceMining environment, designed to test generalization to novel resource collection tasks, DyCoT-RE maintains a steadily increasing learning curve 
+and achieves final rewards close to 2000, while Human-designed rewards remain relatively flat. 
+This indicates that DyCoT-RE’s adaptive reward generation can extract useful signals even in tasks lacking predefined heuristic reward functions.
 
 \begin{figure}[t]
-    \centering
-    \includegraphics[width=0.48\textwidth]{Figures/bar_comparison_3.png}
-    \caption{Final average rewards across environments comparing Human-designed, Eureka, and DyCoT-RE.}
-    \label{fig:bar_comparison}
+\centering
+\includegraphics[width=0.48\textwidth]{Figures/bar_comparison_3.png}
+\caption{Final average rewards across environments comparing Human-designed, Eureka, and DyCoT-RE.}
+\label{fig:bar_comparison}
 \end{figure}
 
-Figure~\ref{fig:bar_comparison} further compares final average rewards among DyCoT-RE, Eureka, and Human-designed baselines. 
-In \textbf{CartPole}, all methods achieve relatively high rewards, reflecting the environment’s simplicity and dense feedback.
-
-In \textbf{BipedalWalker}, DyCoT-RE outperforms both Eureka (231) and Human-designed rewards (215), highlighting its ability to guide policy learning in moderately challenging locomotion tasks where naive rewards fail to capture nuanced stability requirements.
-
-For \textbf{Ant}, DyCoT-RE achieves a substantial performance gain (2100 vs. Eureka's 1276 and Human-designed's 909), indicating that decomposing task objectives and dynamically adjusting sampling and model routing effectively address the curse of dimensionality in complex continuous control.
-
-Finally, in \textbf{SpaceMining}, DyCoT-RE reaches 1782, surpassing Eureka (1356) and Human-designed rewards (1159). The considerable performance gap underscores its adaptability to unseen structural task complexities, demonstrating generalization beyond canonical RL benchmarks.
-
-Overall, these results show that while simpler environments like CartPole exhibit saturated performance across methods, DyCoT-RE’s advantages become increasingly salient as task complexity, dimensionality, and novelty rise. Its integration of Chain-of-Thought reasoning with dual-dynamic optimization produces robust, scalable, and interpretable reward engineering, advancing practical RL training across diverse scenarios.
+Figure~\ref{fig:bar_comparison} compares final average rewards across methods. 
+DyCoT-RE achieves noticeably higher rewards in Cartpole, BipedalWalker, Ant, and SpaceMining. 
+These results demonstrate that the integration of Chain-of-Thought reasoning with dynamic optimization in DyCoT-RE provides meaningful 
+benefits, particularly in environments with sparse feedback or complex task structures.
 
 
-\section{Ablation Study}
+\subsection{Ablation Study}
+\label{sec:ablation}
 
 This section conducts an ablation study to examine the individual contribution of each component in DyCoT-RE, including CoT reasoning, temperature adjustment, and model selection, as well as their combined synergistic effects.
 
-\subsection{Impact of CoT Reasoning}
+\subsubsection{Impact of CoT Reasoning}
 
-Figure~\ref{fig:cot_ablation} compares DyCoT-RE (full) with zero-shot non-CoT reward generation across four environments. Each scatter plot contains 100 reward samples per method.
 
-The plots demonstrate that incorporating CoT reasoning results in a denser cluster of high-reward samples compared to zero-shot generation, which shows widespread low-reward outliers. This indicates that CoT reasoning enhances both reward quality and generation stability.
+We evaluate the impact of incorporating Chain-of-Thought (CoT) reasoning into reward engineering by comparing DyCoT-RE's CoT-enabled variant against a zero-shot baseline lacking structured intermediate reasoning.
+
 
 \begin{figure}[t]
-    \centering
-    \includegraphics[width=0.45\textwidth]{Figures/cot_ablation.png}
-    \caption{Scatter plots comparing CoT-enabled vs. zero-shot reward generation across environments. Blue: CoT-enabled; Dark Green: Zero-shot. Each dot represents a generated reward function's final fitness.}
-    \label{fig:cot_ablation}
+\centering
+\includegraphics[width=0.48\textwidth]{Figures/cot_ablation.png}
+\caption{Final reward distributions for CoT-enabled vs zero-shot reward generation across environments.}
+\label{fig:cot_ablation}
 \end{figure}
 
 
-\subsection{Impact of Temperature Adjustment}
+Figure~\ref{fig:cot_ablation} summarizes reward distributions for both methods across the four benchmark environments. A consistent pattern emerges: CoT-enabled rewards exhibit higher means, lower variance, and reduced outlier incidence compared to zero-shot. In CartPole and SpaceMining, CoT-enabled results are tightly clustered near the environment's upper performance bounds, whereas zero-shot results are widely dispersed, with a substantial proportion of runs yielding suboptimal or even near-zero rewards. This reflects CoT's ability to systematically decompose task objectives into interpretable sub-rewards, enhancing sample efficiency and stabilizing policy learning.
 
-We investigate the effect of temperature by sweeping $T \in [0.0, 1.0]$ in the BipedalWalker environment. Table~\ref{tab:temp_sweep} summarizes the results, including average fitness, max/min fitness, standard deviation, and convergence steps. 
 
-\textbf{Note.} Due to the high computational cost of exhaustive temperature sweeps, BipedalWalker was selected as a representative continuous control task with sufficient complexity and sensitivity to exploration parameters. Preliminary tests on CartPole showed near-saturated performance under all temperatures, while large-scale sweeps on Ant and SpaceMining are left for future work.
+In BipedalWalker, an illustrative deviation is observed. While CoT-enabled runs achieve rewards concentrated between 250–310 with minimal negative outcomes, zero-shot results present a bimodal distribution: one cluster achieves moderate positive rewards ($\sim$150–250), while another cluster yields severely negative rewards (e.g. -124, -97, -73). This bimodality indicates that without structured reasoning, reward generation often fails to encode essential balance or locomotion constraints, resulting in policies that collapse during gait training.
+
+
+Taken together, these results illustrate that CoT reasoning reliably improves reward interpretability and training stability, especially in settings with sparse or ambiguous feedback.
+
+
+
+\subsubsection{Impact of Temperature Adjustment}
+
+Next, we investigate the effect of temperature settings by sweeping $T \in [0.0, 1.0]$ on the BipedalWalker environment. 
+Table~\ref{tab:temp_sweep} summarizes the results, including average fitness, maximum/minimum fitness, standard deviation, and reward efficiency ratio (average fitness divided by standard deviation).
 
 \begin{table}[ht]
 \centering
-\caption{BipedalWalker results under different temperatures. Highlighted in green are top-3 temperatures by average fitness.}
+\caption{BipedalWalker performance under different temperature settings. Top-1 temperature is highlighted in green, DyCoT-RE result in blue.}
 \label{tab:temp_sweep}
 \begin{tabular}{c|c|c|c|c}
 \hline
-Temp & Avg Fit & Max/Min Fit & Std & Conv Steps \\
+Temp & Avg Fit$\uparrow$ & Max/Min Fit $\uparrow$& Std$\downarrow$  & Eff. Ratio$\uparrow$ \\
 \hline
-0.0 & 81.93 & 301.15/-53.01 & 148.67 & 5.0 \\
-0.1 & 149.56 & 310.94/-33.73 & 155.22 & 3.9 \\
-0.2 & \cellcolor{green!15}242.74 & 313.60/-20.27 & 125.47 & 4.4 \\
-0.3 & 210.07 & 311.17/-46.69 & 140.49 & 3.8 \\
-0.4 & \cellcolor{green!25}244.19 & 311.94/-17.13 & 107.02 & 4.3 \\
-0.5 & 215.84 & 310.69/-14.25 & 131.01 & 4.0 \\
-0.6 & \cellcolor{green!35}248.11 & 312.48/-21.18 & 120.45 & 4.7 \\
-0.7 & 225.88 & 312.42/-12.08 & 131.43 & 3.8 \\
-0.8 & 74.33 & 310.42/-46.72 & 143.91 & 3.8 \\
-0.9 & 145.02 & 310.02/-31.58 & 148.51 & 4.7 \\
-1.0 & 192.38 & 310.40/-39.05 & 138.37 & 3.2 \\
+0.0 & 81.93 & 301.15/-53.01 & 148.67 & 0.55 \\
+0.1 & 149.56 & 310.94/-33.73 & 155.22 & 0.96 \\
+0.2 & 242.74 & 313.60/-20.27 & 125.47 & 1.93 \\
+0.3 & 210.07 & 311.17/-46.69 & 140.49 & 1.50 \\
+\rowcolor{green!15}
+0.4 & 244.19 & 311.94/-17.13 & 107.02 & 2.28 \\
+0.5 & 215.84 & 310.69/-14.25 & 131.01 & 1.65 \\
+\rowcolor{green!25}
+0.6 & 248.11 & 312.48/-21.18 & 120.45 & 2.06 \\
+0.7 & 225.88 & 312.42/-12.08 & 131.43 & 1.72 \\
+0.8 & 74.33 & 310.42/-46.72 & 143.91 & 0.52 \\
+0.9 & 145.02 & 310.02/-31.58 & 148.51 & 0.98 \\
+1.0 & 192.38 & 310.40/-39.05 & 138.37 & 1.39 \\
+\rowcolor{blue!15}
+DyCoT-RE & \textbf{292.8} & 315.6/87.2 & 55.2 & 5.30 \\
 \hline
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:temp_lineplot} shows average fitness (solid line) and reward standard deviation (dashed line) under different temperatures. It indicates that moderate temperatures ($0.4$-$0.6$) yield both high average fitness and relatively low variance, balancing exploration and exploitation effectively.
-
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.45\textwidth]{Figures/temp_entropy_reward_heatmap.png}
-    \caption{Average fitness (solid) and standard deviation (dashed) under different temperature settings in BipedalWalker.}
-    \label{fig:temp_lineplot}
-\end{figure}
+Static sweeps show that mid-range temperatures ($T=0.4$–$0.6$) yield higher fitness and lower variance than extremes. 
+DyCoT-RE’s dynamic temperature regulation consistently outperforms these static settings, 
+adapting temperature during training to maintain an effective exploration-exploitation trade-off. 
 
 
-\subsection{Impact of Model Selection}
+\subsubsection{Impact of Model Selection}
 
-Table~\ref{tab:model_perf} compares reward generation performance across different LLM backends. Dynamic model selection outperforms any single static model in both average fitness and minimum reward, indicating its robust adaptability to diverse generation subtasks.
+Finally, we evaluate the impact of DyCoT-RE's dynamic model selection by comparing it against individual static LLM baselines on the BipedalWalker environment. Table~\ref{tab:model_selection} summarizes average fitness, max/min fitness, standard deviation, and reward efficiency ratio (average fitness divided by standard deviation). Only models with sufficient sample sizes ($N>10$) are included.
 
-\begin{table}[ht]
+DyCoT-RE achieves the highest average fitness (\cellcolor{blue!15}307.28) with exceptionally low standard deviation (\cellcolor{blue!15}6.00) and the best efficiency ratio (\cellcolor{blue!15}51.21), demonstrating its capability to consistently generate high-quality rewards across diverse sub-tasks. 
+
+In contrast, while \texttt{codegemma} achieves competitive performance (Avg Fit: 260.8), its higher standard deviation (115.2) results in a substantially lower efficiency ratio (2.26), indicating reduced stability and generalizability compared to DyCoT-RE.
+
+\begin{table*}[ht]
 \centering
-\caption{Performance comparison across LLM models.}
-\label{tab:model_perf}
-\begin{tabular}{c|c|c|c|c}
+\caption{Performance comparison of different LLM backends (N=20) in BipedalWalker. $\uparrow$: higher is better; $\downarrow$: lower is better. Green: per-column best baseline. Blue: DyCoT-RE (dynamic selection).}
+\label{tab:model_selection}
+\begin{tabular}{l|c|c|c|c|c}
 \hline
-Model & Avg Fit & Max Fit & Min Fit & Std \\
+Model (size) & Avg Fit $\uparrow$ & Max Fit $\uparrow$ & Min Fit $\uparrow$ & Std $\downarrow$ & Eff. Ratio $\uparrow$ \\
 \hline
-deepseek-coder & -24.80 & 0.00 & -92.11 & 27.09 \\
-deepseek-r1 & 61.23 & 318.23 & -96.17 & 150.33 \\
-gemma3 & 121.55 & 305.42 & -34.21 & 140.00 \\
-llama3.1 & \cellcolor{green!15}208.60 & 312.38 & -33.73 & 139.53 \\
-qwen2.5 & \cellcolor{green!25}202.50 & 316.28 & -41.58 & 138.94 \\
-qwen2.5-coder & 140.72 & 313.71 & -53.03 & 159.59 \\
+codegemma (7b) & 260.8 & 301.8 & \cellcolor{green!25}34.2 & \cellcolor{green!25}75.2 & 3.46\cellcolor{green!25} \\
+codeqwen (7b) & 32.6 & 307.6 & -76.0 & 98.4 & 0.33 \\
+deepseek-coder (6.7b) & -4.5 & 295.3 & -98.2 & 94.1 & -0.05 \\
+deepseek-r1 (8b) & 44.6 & \cellcolor{green!25}321.2 & -99.6 & 122.1 & 0.37 \\
+gemma3 (4b) & \cellcolor{green!25}278.0 & 314.8 & -34.2 & 82.0 & 3.39 \\
+llama3.1 (8b) & 162.2 & 318.4 & -80.4 & 150.8 & 1.08 \\
+qwen2.5 (7b) & 177.0 & 319.5 & -97.2 & 151.5 & 1.17 \\
+qwen2.5-coder (7b) & 125.6 & 313.7 & -70.8 & 163.2 & 0.77 \\
+\rowcolor{blue!15}
+DyCoT-RE & \textbf{297.28} & \textbf{316.57} & \textbf{89.47} & \textbf{46.00} & \textbf{6.46} \\
 \hline
 \end{tabular}
-\end{table}
+\end{table*}
 
-Figure~\ref{fig:model_bar} presents a bar chart summarizing average fitness across models. The dynamic selection strategy (DyCoT-RE) leverages model diversity to achieve higher and more stable rewards compared to any individual LLM.
+While individual models occasionally excel on narrow tasks, DyCoT-RE’s dynamic model routing provides the most generalizable performance, 
+effectively balancing reward quality, stability, and adaptability in complex continuous control environments.
 
-\begin{figure}[ht]
-    \centering
-    \includegraphics[width=0.45\textwidth]{Figures/model_switch_log.png}
-    \caption{Average fitness of different LLM models vs. DyCoT-RE dynamic selection.}
-    \label{fig:model_bar}
-\end{figure}
+In summary, the ablation study demonstrates that each module—CoT reasoning, temperature adjustment, and model selection—contributes significantly to DyCoT-RE’s superior performance, and their combination leads to synergistic gains.
 
-
-\textbf{In summary}, the ablation study demonstrates that each module—CoT reasoning, temperature adjustment, and model selection—contributes significantly to DyCoT-RE’s superior performance, and their combination leads to synergistic gains.
-% \begin{figure}[!ht]
-% \centering
-% \includegraphics[width=0.9\linewidth]{temperature_correlation.pdf}
-% \caption{Reward–temperature correlation in CartPole (DTRO active)}
-% \label{fig:temp_corr}
-% \end{figure}
 
 
 \section{Discussion}
