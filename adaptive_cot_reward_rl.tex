@@ -164,6 +164,8 @@ intent and machine learning objectives will be critical for the next generation 
 Continued research is thus needed to maximize the synergy between LLM capabilities and RL frameworks to 
 address emerging real-world challenges.
 
+
+
 \subsection{Chain-of-Thought Reasoning Methods}
 
 CoT reasoning has emerged as a powerful paradigm to enhance the reasoning capabilities of LLMs. 
@@ -209,6 +211,8 @@ stochasticity in structured data generation. Nguyen et al. \cite{nguyen2024turni
 achieving improved narrative generation performance.
 
 
+
+
 For model selection, recent work has focused on choosing optimal model configurations or expert modules to maximize task performance within computational constraints. 
 Switch Transformers \cite{fedus2022switch} introduced sparse activation mechanisms, enabling efficient expert selection at trillion-parameter scale, 
 while GLaM \cite{du2022glam} leveraged Mixture-of-Experts (MoE) architectures to dynamically scale model capacity. 
@@ -217,6 +221,14 @@ preference-conditioned dynamic routing for cost-efficient LLM generation. Hu et 
 from multiple specialized LLMs, enhancing system robustness. Nakaishi et al. \cite{nakaishi2024critical} further revealed phase transition behaviors in LLM sampling regimes, 
 informing temperature scaling strategies. Furthermore, Li et al. \cite{li2025revisiting} revisited self-consistency decoding from a distributional alignment perspective, 
 offering insights relevant to expert aggregation and answer aggregation stability.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.85\linewidth]{Figures/dycot-re-architecture.png}
+    \caption{DyCoT-RE framework integrating CoT reasoning, dynamic temperature adjustment, and model selection in an evolutionary optimization loop.}
+    \label{fig:architecture}
+\end{figure*}
+
 
 Despite these advances, integrating dynamic temperature regulation and model selection within a unified CoT-driven reward engineering framework remains underexplored. 
 Existing temperature adaptation methods primarily focus on text generation diversity and calibration, whereas model selection research emphasizes computational efficiency 
@@ -230,69 +242,45 @@ selection, extending them to the domain of automated, interpretable reward engin
 This section details the DyCoT-RE framework, which integrates structured CoT reasoning with a dual-dynamic optimization 
 strategy to generate interpretable and adaptive reward functions for reinforcement learning.
 
+
+
 \subsection{Framework Overview}
 
-An overview of DyCoT-RE is presented in Figure~\ref{fig:architecture}. 
-The framework consists of three major components: CoT-based structured reward decomposition, dynamic temperature adjustment to modulate sampling diversity, 
-and dynamic model selection to allocate specialized LLMs for sub-tasks.
+Figure~\ref{fig:architecture} presents an overview of DyCoT-RE,
+which integrates three key components:
+structured Chain-of-Thought (CoT) reward decomposition,
+dynamic temperature adjustment,
+and dynamic model selection.
 
-\begin{figure*}[t]
-    \centering
-    \includegraphics[width=0.85\linewidth]{Figures/dycot-re-architecture.png}
-    \caption{DyCoT-RE framework integrating CoT reasoning, dynamic temperature adjustment, and model selection in an evolutionary optimization loop.}
-    \label{fig:architecture}
-\end{figure*}
+The framework receives four inputs:
+natural language task descriptions specifying agent behaviors,
+environment interfaces defining state-action spaces,
+system-level prompts for reward design constraints,
+and coding instructions for implementation.
 
-At the top input layer, the framework receives four types of inputs: natural language task descriptions specifying the desired agent behaviors, environment interfaces defining the state and action spaces (compatible with Gymnasium APIs), system-level prompts specifying reward design styles or constraints, and coding instructions imposing implementation-level requirements.
+At its core, employs four types of LLMs: Thinking, Code, Repair, and Analysis LLMs, 
+hereafter denoted as $\mathcal{M}_{\text{think}}$, $\mathcal{M}_{\text{code}}$, $\mathcal{M}_{\text{repair}}$, and $\mathcal{M}_{\text{analysis}}$ respectively.
 
-The middle processing layer forms the core of DyCoT-RE, structured as a closed-loop system comprising three synergistic modules:
-
-First, the CoT Reasoning Module parses task descriptions into structured subgoals and transforms them into mathematical sub-reward components $r_i(s,a)$ through multi-step semantic decomposition (decompose → identify → formulate). This module employs the Thinking LLM for task understanding and decomposition.
-
-Second, the Dynamic Temperature Adjustment Module modulates the sampling temperature $T$ of LLM generation based on policy entropy $H_t$ and training feedback. As shown in Figure~\ref{fig:control-flow}, it continuously adjusts the exploration–exploitation trade-off, ensuring generative diversity while maintaining stability during reward code synthesis.
-
-Third, the Dynamic Model Selection Module dynamically routes sub-tasks to specialized LLMs, including:
-Thinking, Code, Repair and Analysis LLMs. 
-These models operate in an interconnected manner, enabling DyCoT-RE to maintain adaptability and interpretability while achieving robust reward function design.
-
-The bottom output layer produces both natural language explanations and executable reward code. The generated reward function
+These models operate in an interconnected closed-loop pipeline to produce reward functions
 
 \begin{equation}
-R(s,a) = \sum_{i=1}^{m} w_i r_i(s,a)
+    R(s,a) = \sum_{i=1}^{m} w_i \cdot r_i(s,a),
+\label{eq:reward_function}
 \end{equation}
 
-is tested within the RL environment, where performance metrics such as average episode reward, variance, and convergence rate are recorded. Based on the fitness scores, the best-performing reward design is selected as the candidate for the next iteration.
+which are evaluated in the RL environment.
+The performance metrics guide subsequent optimization iterations.
 
-Figure~\ref{fig:control-flow} further highlights the evolutionary optimization loop, where:
+Overall, DyCoT-RE establishes an adaptive and interpretable reward engineering framework
+by integrating structured reasoning with dual-dynamic optimization strategies.
 
-\begin{equation}
-\text{CoT}_{k+1}
-=
-\text{Analysis}
-\circ
-\text{Repair}
-\circ
-\text{Code}
-\circ
-\text{Thinking}(\text{CoT}_k).
-\end{equation}
-
-In each generation $k$, multiple reward candidates are generated via CoT decomposition and sampled with temperature $T_k$, evaluated in the environment, and refined through gradient-based analysis to update sub-reward weights and sampling strategies.
-
-The dual-dynamic optimization, represented as the DNA double helix in Figure~\ref{fig:architecture}, emphasizes the synergistic coupling of temperature modulation (controlling generative stochasticity) and model selection (allocating specialized LLM expertise). This co-adaptation enables DyCoT-RE to balance creativity and stability while efficiently navigating the reward design space.
-
-Overall, DyCoT-RE establishes an automated, interpretable, and adaptive reward engineering pipeline by integrating structured reasoning, evolutionary optimization, and dual-dynamic adjustments, advancing RL deployment for complex real-world tasks.
 
 
 \subsection{Chain-of-Thought Reasoning for Reward Engineering}
 
-Let $d$ denote the task description and $s,a$ the state-action pair. The reward function is decomposed into:
-
-\begin{equation}
-R(s,a) = \sum_{i=1}^{m} w_i \cdot r_i(s,a),
-\end{equation}
-
-where $r_i(s,a)$ is the sub-reward for subgoal $i$, generated via CoT parsing:
+Let $d$ denote the task description and $(s,a)$ the state-action pair.
+As defined in Eq.~\eqref{eq:reward_function}, 
+the reward function $r_i(s,a)$ is the sub-reward for subgoal $i$, generated via CoT parsing:
 
 \begin{equation}
 r_i(s,a) = \text{CoT}(I_i),
@@ -315,199 +303,190 @@ where $J(\theta)$ is the expected cumulative reward:
 
 \begin{equation}
 J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \sum_{t=0}^{T} \gamma^t R(s_t,a_t) \right].
+\label{eq:rl_objective}
 \end{equation}
 
 This CoT-based formulation ensures that each sub-reward remains semantically interpretable and traceable to its natural language origin.
 
 \subsection{Dual-Dynamic Optimization Strategy}
 
-Figure~\ref{fig:control-flow} illustrates the coupled feedback architecture of dual-dynamic optimization, which comprises temperature 
-adjustment and model selection operating synergistically.
+Figure~\ref{fig:control-flow} illustrates the coupled feedback architecture of DyCoT-RE,
+where temperature adjustment and model selection operate in synergy
+to enhance reward function generation and RL performance.
 
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.85\linewidth]{Figures/dycot-re-control-flow.png}
-    \caption{DyCoT-RE dynamic control flow integrating temperature modulation and model selection with CoT iterative reasoning.}
+    \caption{DyCoT-RE control flow integrating temperature modulation and model selection within CoT iterative reasoning.}
     \label{fig:control-flow}
 \end{figure*}
 
 \subsubsection{Dynamic Temperature Adjustment}
 
-Temperature modulation is formalized as a constrained stochastic optimal control problem. Let $T_t$ be the temperature at iteration $t$, 
-$H_t$ the policy entropy, and $\Delta T_t$ the temperature adjustment. The entropy is computed as:
+Temperature adjustment modulates the sampling temperature $T$ 
+based on policy entropy $H$, confidence $C$, and performance $R$. 
+Entropy reflects generative diversity, confidence measures output stability, 
+and performance evaluates reward improvement relative to historical best.
+
+The update rule is formulated as:
 
 \begin{equation}
-H_t = - \sum_{i=1}^{n} p_i \log p_i,
-\label{eq:entropy}
+T_{k+1}
+=
+\text{clip}
+\left(
+T_k
++
+\alpha \frac{\partial T}{\partial H_k} \Delta t
+\right),
 \end{equation}
 
-where $p_i$ are normalized probabilities over action selections. The temperature update follows:
+where $\alpha$ is a learning rate,
+and the gradient $\frac{\partial T}{\partial H_k}$ reflects entropy-driven adjustment.
+An alternative implementation combines smoothing and multiplicative adjustment:
 
 \begin{equation}
-T_{t+1} = T_t + \alpha \frac{\partial T}{\partial H_t} \Delta t,
-\label{eq:temp_update}
+T_{k+1}
+=
+\text{clip}
+\left(
+\alpha T_k
++
+(1-\alpha) T_k f(H_k,C_k,R_k)
+\right).
 \end{equation}
 
-with $\alpha$ as the learning rate. The adjustment logic satisfies:
+Here, $f(H,C,R)$ integrates:
 
 \begin{equation}
-T_{t+1} = 
-\begin{cases}
-T_t + \eta_1 (H_t - H_{target}), & \text{if } H_t > H_{target} \\
-T_t - \eta_2 (H_{target} - H_t), & \text{otherwise},
-\end{cases}
+f(H,C,R)
+=
+f_R(R)
+f_H(H)
+f_C(C),
 \end{equation}
 
-(see also Eq.~\eqref{eq:temp_update}).
-
-The optimal control seeks to maximize:
-
-\begin{equation}
-\max_{T} \mathbb{E} \left[ \sum_{t=0}^{\tau} \gamma^t R_t \right],
-\end{equation}
-
-subject to Lyapunov stability conditions:
-
-\begin{equation}
-\dot{V}(T) \leq -\eta V(T), \quad \eta > 0.
-\end{equation}
-
+where $f_R$ ensures performance protection, $f_H$ regulates entropy bounds,
+and $f_C$ maintains confidence stability.
 
 \subsubsection{Dynamic Model Selection}
 
-In DyCoT-RE, dynamic model selection refers to the adaptive routing of different sub-tasks in the reward engineering pipeline to specialized LLMs according to their functional strengths and the current training context.
+Dynamic model selection adaptively routes sub-tasks to specialized LLMs, 
+leveraging their complementary strengths across the reward engineering pipeline.
 
-Unlike traditional static generation pipelines, DyCoT-RE maintains a pool of four dedicated LLM types:
+The four LLM classes include:
+$\mathcal{M}_{\text{think}}$ for task understanding and semantic decomposition, 
+$\mathcal{M}_{\text{code}}$ for reward function synthesis, 
+$\mathcal{M}_{\text{repair}}$ for code correction, 
+and $\mathcal{M}_{\text{analysis}}$ for performance evaluation and sub-reward weight updates.
 
-\begin{enumerate}
-    \item \textbf{Thinking LLM} ($\mathcal{M}_{\text{think}}$) focuses on semantic parsing, environment understanding, and task decomposition. It processes natural language descriptions to identify structured subgoals and relevant state-action variables for reward formulation, as in Eq.~\eqref{eq:thinkingllm}.
+Formally, the decomposition and generation process can be expressed as:
+
+\begin{equation}
+g_i = \mathcal{M}_{\text{think}}(d,E),
+\end{equation}
+
+\begin{equation}
+w_i = \mathcal{M}_{\text{analysis}}(R_i),
+\end{equation}
+
+\begin{equation}
+r_i(s,a) = \mathcal{M}_{\text{code}}(g_i,w_i),
+\end{equation}
+
+where $d$ is the task description and $E$ the environment specification.
+Repair LLM intervenes when $\mathcal{M}_{\text{code}}$ outputs execution errors during evaluation.
+
+Model selection at iteration $k$ follows:
+
+\begin{equation}
+    M_{k+1} =
+    \begin{cases}
+    \displaystyle
+    \arg\max_{m \in \mathcal{M}_s} \text{Perf}(m), & 1-\epsilon, \\[8pt]
+    \text{Random}(\mathcal{M}_s \setminus \{M_k\}), & \epsilon,
+    \end{cases}
+    \end{equation}
     
-    \item \textbf{Code LLM} ($\mathcal{M}_{\text{code}}$) specializes in synthesizing executable reward functions based on decomposed subgoals and prior analysis feedback, as in Eq.~\eqref{eq:reward_agg}.
-    
-    \item \textbf{Repair LLM} ($\mathcal{M}_{\text{repair}}$) is activated when code execution errors arise during environment evaluation, as in Eq.~\eqref{eq:repairllm}.
-    
-    \item \textbf{Analysis LLM} ($\mathcal{M}_{\text{analysis}}$) evaluates reward candidate performance, computes gradients for sub-reward weight updates, and recommends adjustments, as in Eq.~\eqref{eq:analysisllm}.
-\end{enumerate}
 
-Dynamic model selection within DyCoT-RE governs the allocation of reward engineering sub-tasks to these four specialized LLMs. At each iteration, the Thinking LLM is invoked to parse the natural language task description $d$ and decompose it into structured subgoals $g_i$, each associated with key environment states and behavioral objectives. Mathematically, this semantic parsing can be conceptualized as:
+where $\mathcal{M}_s$ is the model pool for stage $s$, 
+$\text{Perf}(m)$ the performance score, 
+and $\epsilon$ the exploration rate ensuring selection diversity.
 
-\begin{equation}
-g_i = \mathcal{M}_{\text{think}}(d, E),
-\label{eq:thinkingllm}
-\end{equation}
-
-where $E$ denotes the environment specification.
-
-The subgoals $g_i$ are then passed to the Code LLM, which generates executable reward functions by translating each subgoal into a sub-reward component $r_i(s,a)$ and composing them into the final aggregated reward:
-
-\begin{equation}
-R(s,a) = \sum_{i=1}^{m} w_i r_i(s,a),
-\label{eq:reward_agg}
-\end{equation}
-
-where weights $w_i$ are initialized based on LLM-inferred subgoal priority and iteratively refined through performance analysis.
-
-During execution within the RL environment, if runtime errors occur (e.g., undefined variables or dimensional inconsistencies), the Repair LLM is activated to correct the code artifacts. Formally, given an error trace $e$ and original code $c$, the Repair LLM generates an updated implementation:
-
-\begin{equation}
-c' = \mathcal{M}_{\text{repair}}(e, c).
-\label{eq:repairllm}
-\end{equation}
-
-Post-execution, the Analysis LLM evaluates policy performance by calculating rollout-based metrics such as expected cumulative reward $J(\theta)$ and reward variance $\sigma_R^2$. It then recommends updates to sub-reward weights to improve task alignment and convergence efficiency:
-
-\begin{equation}
-w_i^{(t+1)} = w_i^{(t)} + \eta \frac{\partial J(\theta)}{\partial w_i} - \lambda \sum_{j \neq i} \rho_{ij},
-\label{eq:analysisllm}
-\end{equation}
-
-where $\rho_{ij}$ represents the Pearson correlation coefficient between sub-reward components to penalize redundancy, and $\eta, \lambda$ are learning rate and regularization hyperparameters, respectively.
-
-Model selection decisions are driven by maximizing estimated module-wise performance $\hat{p}_j(f_k, z)$ for each task input $z$, yielding:
-
-\begin{equation}
-k_j^* = \arg\max_{k \in M} \hat{p}_j(f_k, z),
-\end{equation}
-
-where $k_j^*$ is the optimal model choice for module $j$ from candidate set $M$.
-
-Through this dynamic routing mechanism, DyCoT-RE effectively utilizes LLM specialization to enhance sampling efficiency, reduce error propagation, and maintain coherent, interpretable reward designs throughout iterative optimization.
-
+At each iteration, the next model $M_{k+1}$ is selected by choosing the highest-performing model from the pool $\mathcal{M}_s$ with probability $1-\epsilon$, or randomly selecting another model with probability $\epsilon$. This pool includes the Repair LLM, which is triggered when error correction is needed during reward code evaluation.
 
 \subsubsection{Joint Adaptive Optimization}
 
-The dual-dynamic optimization strategy in DyCoT-RE integrates temperature adjustment and model selection into a closed-loop, mutually adaptive system to enhance reward function quality and training efficiency. Unlike independent application of these mechanisms, their joint operation forms a synergistic optimization pathway aligning language model sampling dynamics with reinforcement learning objectives.
-
-At each iteration $t$, the Thinking LLM decomposes the task description into structured subgoals, producing an initial reward design $R_t(s,a)$. This design is passed to the Code LLM to generate executable Python code for environment evaluation. During agent training with policy $\pi_{\theta}$, the policy entropy $H_t$ is computed as:
-
-\begin{equation}
-H_t = - \sum_{a \in \mathcal{A}} \pi_{\theta}(a|s_t) \log \pi_{\theta}(a|s_t),
-\end{equation}
-
-quantifying exploration stochasticity. Simultaneously, rollout-based performance metrics, including expected return $J(\theta)$ and reward variance $\sigma_R^2$, are monitored:
+Temperature adjustment and model selection form a joint adaptive optimization loop.
+Temperature $T$ influences the sampling distribution of reward candidates:
 
 \begin{equation}
-J(\theta) = \mathbb{E}_{\pi_\theta} \left[ \sum_{k=0}^{T} \gamma^k R(s_k,a_k) \right],
-\end{equation}
-\begin{equation}
-\sigma_R^2 = \mathbb{E}[(R - \mathbb{E}[R])^2].
+r_i(s,a) \sim p(r_i | g_i, T),
 \end{equation}
 
-The Dynamic Temperature Adjustment module uses these feedback signals to update the sampling temperature $T$ according to:
+where $g_i = \mathcal{M}_{\text{think}}(d,E)$ denotes the subgoal generated by the Thinking LLM
+given task description $d$ and environment $E$.
+This sampling process modulates policy entropy and, consequently, cumulative rewards.
 
-\begin{equation}
-T_{t+1} = T_t + \alpha \left( \frac{\partial T}{\partial H_t} \Delta t \right),
-\end{equation}
+Concurrently, model selection determines the semantic decomposition quality,
+code correctness, error repair, and performance evaluation,
+thereby shaping the expressivity and effectiveness of reward functions.
 
-where $\alpha$ is the learning rate controlling update smoothness, and $\frac{\partial T}{\partial H_t}$ represents sensitivity of temperature to entropy deviation from the target. Higher policy entropy relative to the target increases $T$, promoting more diverse LLM generations to facilitate exploration, while lower entropy triggers a temperature decrease to stabilize sampling outputs.
-
-Concurrently, the Dynamic Model Selection module evaluates module-wise performance of candidate LLMs based on local quality estimations $\hat{p}_j(f_k, z)$ and global training improvements:
+The combined objective of temperature adjustment and model selection is to maximize:
 
 \begin{equation}
-k_j^* = \arg\max_{k \in M} \left[ \hat{p}_j(f_k, z) + \gamma \cdot J(\theta) \right],
+J(\theta; T, M)
+=
+\mathbb{E}_{\pi_\theta}
+\left[
+\sum_{t=0}^{T}
+\gamma^t
+R_{T,M}(s_t,a_t)
+\right],
 \end{equation}
 
-where $\gamma$ controls the influence of global reward performance on model routing decisions.
+where $R_{T,M}(s,a)$ is the reward function generated under temperature $T$
+and model configuration $M$.
 
-Critically, these two dynamic adjustments interact adaptively. Temperature adjustment influences the sampling diversity of the Code LLM, affecting candidate reward variants’ distribution and consequently altering the inputs for model selection. Conversely, model selection decisions affect the generation quality and robustness of reward functions, which modulate agent behavior, impacting policy entropy and subsequent temperature updates.
-
-This mutual adaptation forms a coupled optimization system expressed abstractly as:
+This joint optimization is formalized as:
 
 \begin{equation}
-\begin{cases}
-T_{t+1} = f_T(H_t, J(\theta), \sigma_R^2), \\
-k_j^* = g_k(T_t, \hat{p}_j(f_k, z), J(\theta)),
-\end{cases}
+(T^*, M^*)
+=
+\arg\max_{T,M}
+J(\theta; T, M).
 \end{equation}
 
-where $f_T$ and $g_k$ denote the temperature update and model selection policies, respectively.
+Overall, this interconnected loop iteratively adapts both sampling temperature
+and model selection strategies to maximize the expected RL objective
+as defined in Eq.~\eqref{eq:rl_objective}, ensuring stable, diverse,
+and effective reward engineering throughout the training process.
 
-To ensure convergence and stability, a Lyapunov-based condition is enforced:
 
-\begin{equation}
-\frac{\partial^2 T}{\partial H^2}
-+ \frac{\partial^2 T}{\partial C^2}
-\leq \frac{2}{\eta} \left( \frac{\partial R}{\partial T} \right)^2,
-\end{equation}
 
-with $\eta$ representing a Lipschitz constant bounding system gradients. This guarantees that the joint temperature-model adjustment does not induce oscillatory divergence during training.
-
-Overall, this integrated dual-dynamic optimization framework enables DyCoT-RE to adaptively balance exploration and exploitation while efficiently leveraging specialized LLM capabilities for interpretable reward function generation across diverse RL tasks.
 
 \section{Experiments}
 
 
 \subsection{Experimental Setup}
 
-\subsubsection{Environments}
 
-We evaluate DyCoT-RE on four reinforcement learning environments that span diverse task structures and complexities. 
-The standard benchmarks include CartPole (discrete pole balancing), BipedalWalker (continuous biped locomotion), 
-and Ant (high-dimensional quadruped control). 
-Additionally, we design a custom SpaceMining environment to assess generalization to novel multi-agent resource collection 
-tasks beyond standard benchmarks. All environments are implemented using the Gymnasium platform. 
-For baseline comparisons, official Gymnasium reward functions are used in standard tasks, 
-while SpaceMining employs a manually designed heuristic reward emphasizing resource efficiency and collision avoidance.
+DyCoT-RE is evaluated on four reinforcement learning environments,
+which span diverse task difficulties, action spaces, and generalization challenges.
+
+Standard benchmarks include CartPole, BipedalWalker, and Ant,
+covering discrete control tasks and high-dimensional continuous locomotion.
+
+To assess generalization beyond pretrained benchmark knowledge,
+we introduce SpaceMining, a custom-designed environment
+where an agent collects resources under partial observability
+and dynamic physics constraints.
+
+SpaceMining is developed as an original contribution in this work,
+with full code released and interactive visualizations available on the project website.\footnote{
+Project website: \url{https://lola-jo.github.io/space_mining/}.
+}
+
 
 \subsubsection{Baselines}
 
@@ -532,23 +511,17 @@ comparing DyCoT-RE against its internal variants:
 
 - DyCoT-RE without model selection
 
-Due to computational constraints and consistent observed trends across environments, 
-temperature adjustment and model selection ablation were conducted on BipedalWalker as a representative continuous control task, 
-while CoT reasoning was evaluated on all four environments to confirm its general effectiveness.
 
 
 \subsubsection{Implementation Details}
 
-All experiments use PPO from Stable-Baselines3, with hyperparameters summarized in Table~\ref{tab:env_settings}. 
-Policy networks employ two-layer MLPs ([64,64] units) for single-agent tasks and a larger [256,256,128] MLP for SpaceMining. 
-Models are trained with Adam (learning rate 0.0003), batch size 64, GAE $\lambda=0.95$, and 
-discount factor $\gamma=0.999$ ($0.99$ for SpaceMining).
+All experiments use Proximal Policy Optimization from Stable-Baselines3, with hyperparameters summarized in Table~\ref{tab:env_settings}.
 
-Reward generation uses DyCoT-RE with a local LLM backend deployed via Ollama. 
-Each CoT iteration produces 8 candidate rewards in parallel at a temperature of 0.6, enabling controlled diversity. 
-No handcrafted prompt templates are used to promote open-ended generation. 
-Final evaluations report mean performance over 10 test episodes with varied seeds. 
-GPU resource management automatically releases memory when utilization exceeds 60\%, ensuring stable parallel execution.
+Training uses the Adam optimizer with a learning rate of 0.0003, batch size 64, $\lambda=0.95$, and $\gamma=0.999$.
+
+Reward functions are generated by DyCoT-RE with a local LLM deployed via Ollama. Each chain-of-thought iteration samples eight candidate rewards in parallel with a temperature of 0.6 to balance diversity and coherence.
+
+Final performance is reported as the mean over ten test episodes with different seeds.
 
 \begin{table}[ht]
 \centering
@@ -574,31 +547,31 @@ SpaceMining & 1600 & $3 \times 10^6$ & 8 & 8 \\
 This section summarizes the performance of DyCoT-RE compared to baselines across four representative reinforcement learning environments.
 
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
-\includegraphics[width=0.85\linewidth]{Figures/reward_episode_curve_1.pdf}
+\includegraphics[width=0.48\textwidth]{Figures/reward_episode_curve_2.pdf}
 \caption{Learning curves of DyCoT-RE (blue) vs Human-designed rewards (green) across training timesteps.}
 \label{fig:learning_curves}
-\end{figure*}
+\end{figure}
 
 Figure~\ref{fig:learning_curves} shows that in CartPole, a simple discrete control task with dense and informative rewards, 
 DyCoT-RE achieves slightly faster convergence than the Human-designed baseline, but the final reward difference remains small. 
 This is expected, as the environment’s inherent simplicity and clear feedback signals allow even heuristic rewards to perform well, 
 limiting the potential benefit from additional reward optimization.
 
-In other environments, the advantages of DyCoT-RE are more apparent. For example, in BipedalWalker, which requires coordinated control 
-of multiple joints under sparse and noisy feedback, DyCoT-RE produces smoother learning curves and achieves higher final rewards. 
-Its structured reward decomposition may help the agent acquire stable walking gaits by explicitly separating balance and propulsion objectives.
+In contrast, DyCoT-RE demonstrates more pronounced advantages in complex environments.
 
-In Ant, a high-dimensional locomotion task, both methods initially experience unstable exploration with reward drops. 
-However, DyCoT-RE recovers earlier—around 1.2 million timesteps—and continues improving towards higher rewards. 
-This suggests that DyCoT-RE is better able to resolve credit assignment challenges in redundant action spaces, accelerating policy learning in later training stages.
+For BipedalWalker, which demands coordinated multi-joint control under sparse and noisy feedback, DyCoT-RE yields smoother learning curves and higher terminal rewards.
+Its structured reward decomposition likely facilitates learning stable locomotion by explicitly disentangling balance and propulsion objectives.
 
-In the SpaceMining environment, designed to test generalization to novel resource collection tasks, DyCoT-RE maintains a steadily increasing learning curve 
-and achieves final rewards close to 2000, while Human-designed rewards remain relatively flat. 
-This indicates that DyCoT-RE’s adaptive reward generation can extract useful signals even in tasks lacking predefined heuristic reward functions.
+In the high-dimensional Ant task, both methods face initial exploration instability and reward regressions.
+However, DyCoT-RE recovers earlier (around 1.2 million timesteps) and continues to improve, indicating superior handling of credit assignment in redundant action spaces and accelerated late-stage policy refinement.
 
-\begin{figure}[t]
+On the custom SpaceMining environment, designed to evaluate generalization on novel resource collection challenges, DyCoT-RE sustains steady reward improvement, achieving final scores near 2000.
+
+By contrast, Human-designed rewards plateau early, highlighting DyCoT-RE’s capability to adaptively generate meaningful rewards even without predefined heuristics.
+
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.48\textwidth]{Figures/bar_comparison_5.pdf}
 \caption{Final average rewards across environments comparing Human-designed, Eureka, and DyCoT-RE.}
@@ -622,16 +595,17 @@ This section conducts an ablation study to examine the individual contribution o
 We evaluate the impact of incorporating Chain-of-Thought (CoT) reasoning into reward engineering by comparing DyCoT-RE's CoT-enabled variant against a zero-shot baseline lacking structured intermediate reasoning.
 
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.48\textwidth]{Figures/cot_ablation_1.pdf}
-\caption{Final reward distributions for CoT-enabled vs zero-shot reward generation across environments.}
-\label{fig:cot_ablation}
-\end{figure}
-
 
 Figure~\ref{fig:cot_ablation} summarizes reward distributions for both methods across the four benchmark environments. A consistent pattern emerges: CoT-enabled rewards exhibit higher means, lower variance, and reduced outlier incidence compared to zero-shot. In CartPole and SpaceMining, CoT-enabled results are tightly clustered near the environment's upper performance bounds, whereas zero-shot results are widely dispersed, with a substantial proportion of runs yielding suboptimal or even near-zero rewards. This reflects CoT's ability to systematically decompose task objectives into interpretable sub-rewards, enhancing sample efficiency and stabilizing policy learning.
 
+
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.48\textwidth]{Figures/cot_ablation_1.pdf}
+    \caption{Final reward distributions for CoT-enabled vs zero-shot reward generation across environments.}
+    \label{fig:cot_ablation}
+    \end{figure}
 
 In BipedalWalker, an illustrative deviation is observed. While CoT-enabled runs achieve rewards concentrated between 250–310 with minimal negative outcomes, zero-shot results present a bimodal distribution: one cluster achieves moderate positive rewards ($\sim$150–250), while another cluster yields severely negative rewards (e.g. -124, -97, -73). This bimodality indicates that without structured reasoning, reward generation often fails to encode essential balance or locomotion constraints, resulting in policies that collapse during gait training.
 
@@ -639,10 +613,18 @@ In BipedalWalker, an illustrative deviation is observed. While CoT-enabled runs 
 Taken together, these results illustrate that CoT reasoning reliably improves reward interpretability and training stability, especially in settings with sparse or ambiguous feedback.
 
 
+    
+
 
 \subsubsection{Impact of Temperature Adjustment}
 
-Next, we investigate the effect of temperature settings by sweeping $T \in [0.0, 1.0]$ on the BipedalWalker environment. 
+
+Due to computational constraints and consistent observed trends across environments, 
+temperature adjustment and model selection ablation were conducted on BipedalWalker as a representative continuous control task, 
+while CoT reasoning was evaluated on all four environments to confirm its general effectiveness.
+
+This section investigates the effect of temperature settings by sweeping $T \in [0.0, 1.0]$ on the BipedalWalker environment. 
+
 Table~\ref{tab:temp_sweep} summarizes the results, including average fitness, maximum/minimum fitness, standard deviation, and reward efficiency ratio (average fitness divided by standard deviation).
 
 \begin{table}[ht]
@@ -685,27 +667,27 @@ DyCoT-RE achieves the highest average fitness (\cellcolor{blue!15}307.28) with e
 
 In contrast, while \texttt{codegemma} achieves competitive performance (Avg Fit: 260.8), its higher standard deviation (115.2) results in a substantially lower efficiency ratio (2.26), indicating reduced stability and generalizability compared to DyCoT-RE.
 
-\begin{table*}[ht]
+\begin{table}[ht]
 \centering
 \caption{Performance comparison of different LLM backends (N=20) in BipedalWalker. $\uparrow$: higher is better; $\downarrow$: lower is better. Green: per-column best baseline. Blue: DyCoT-RE (dynamic selection).}
 \label{tab:model_selection}
-\begin{tabular}{l|c|c|c|c|c}
+\begin{tabular}{l|c|c|c|c}
 \hline
-Model (size) & Avg Fit $\uparrow$ & Max Fit $\uparrow$ & Min Fit $\uparrow$ & Std $\downarrow$ & Eff. Ratio $\uparrow$ \\
+Model (size) & Avg Fit $\uparrow$ & Max Fit $\uparrow$ & Std $\downarrow$ & Eff. Ratio $\uparrow$ \\
 \hline
-codegemma (7b) & 260.8 & 301.8 & \cellcolor{green!25}34.2 & \cellcolor{green!25}75.2 & 3.46\cellcolor{green!25} \\
-codeqwen (7b) & 32.6 & 307.6 & -76.0 & 98.4 & 0.33 \\
-deepseek-coder (6.7b) & -4.5 & 295.3 & -98.2 & 94.1 & -0.05 \\
-deepseek-r1 (8b) & 44.6 & \cellcolor{green!25}321.2 & -99.6 & 122.1 & 0.37 \\
-gemma3 (4b) & \cellcolor{green!25}278.0 & 314.8 & -34.2 & 82.0 & 3.39 \\
-llama3.1 (8b) & 162.2 & 318.4 & -80.4 & 150.8 & 1.08 \\
-qwen2.5 (7b) & 177.0 & 319.5 & -97.2 & 151.5 & 1.17 \\
-qwen2.5-coder (7b) & 125.6 & 313.7 & -70.8 & 163.2 & 0.77 \\
+codegemma (7b) & 260.8 & 301.8 & \cellcolor{green!25}34.2 & 3.46\cellcolor{green!25} \\
+codeqwen (7b) & 32.6 & 307.6 & -76.0 & 0.33 \\
+deepseek-coder (6.7b) & -4.5 & 295.3 & -98.2 & -0.05 \\
+deepseek-r1 (8b) & 44.6 & \cellcolor{green!25}321.2 & -99.6 & 0.37 \\
+gemma3 (4b) & \cellcolor{green!25}278.0 & 314.8 & -34.2 & 3.39 \\
+llama3.1 (8b) & 162.2 & 318.4 & -80.4 & 1.08 \\
+qwen2.5 (7b) & 177.0 & 319.5 & -97.2 & 1.17 \\
+qwen2.5-coder (7b) & 125.6 & 313.7 & -70.8 & 0.77 \\
 \rowcolor{blue!15}
-DyCoT-RE & \textbf{297.28} & \textbf{316.57} & \textbf{89.47} & \textbf{46.00} & \textbf{6.46} \\
+DyCoT-RE & \textbf{297.28} & \textbf{316.57} & \textbf{89.47} & \textbf{6.46} \\
 \hline
 \end{tabular}
-\end{table*}
+\end{table}
 
 While individual models occasionally excel on narrow tasks, DyCoT-RE’s dynamic model routing provides the most generalizable performance, 
 effectively balancing reward quality, stability, and adaptability in complex continuous control environments.
