@@ -164,20 +164,26 @@ LLMs can interpret high-level task descriptions, extract key objectives, and tra
 This capability facilitates more intuitive alignment with human intentions, reduces engineering overhead, and enhances agent 
 adaptability.
 
-Recent frameworks exemplify the growing use of LLMs for automated reward engineering in RL.
-EUREKA \cite{ma2023eureka} treats LLMs as autonomous agents that iteratively generate, mutate, and select reward code via performance-based tournaments.
-Text2Reward \cite{xie2023text2reward} focuses on direct reward code generation from natural language, while CARD \cite{sun2024large} emphasizes iterative code refinement guided by LLM feedback.
+Recent studies have increasingly leveraged LLMs for automated reward engineering in reinforcement learning. 
+Early demonstrations showed that language descriptions can serve as reward signals or be translated into executable reward code, 
+notably Reward Design with Language Models \cite{kwon2023reward} and Language-to-Rewards (L2R) \cite{yu2023language}. 
+Building on this concept, rapid progress has been made, from simple prompts to automatic code generation and closed-loop optimization.
+Representative works include Text2Reward \cite{xie2023text2reward} for dense reward shaping with iterative refinement, 
+VLM-based zero-shot rewards \cite{rocamonde2023vision} using vision-language models, and LLM4PG \cite{shen2024beyond} for automated 
+preference labeling. 
 
-Beyond static reward generation, recent feedback-driven approaches such as adversarial prompt detection [Xie et al., 2024], self-play alignment [Wu et al., 2024], and benchmarking frameworks [Song et al., 2025] have advanced reward modeling quality. 
-Overall, LLM-based reward engineering represents a paradigm shift. 
-By integrating natural language reasoning and dynamic feedback optimization, 
-these methods offer scalable reward generation pipelines. 
-As tasks grow in complexity and diversity, leveraging LLMs to bridge the gap between human 
-intent and reinforcement learning objectives will be critical for the next generation of intelligent systems. 
-Continued research is thus needed to maximize the synergy between LLM capabilities and RL frameworks to 
-address emerging real-world challenges.
+Among these, Eureka \cite{ma2023eureka} stands out as a landmark framework that treats LLMs as autonomous agents, 
+iteratively generating, mutating, and selecting reward code via performance-based tournaments without hand-tuned templates, 
+consistently surpassing expert-designed rewards across diverse domains by approximately 52\%. 
+CARD \cite{sun2024large} further advanced this paradigm with dynamic feedback pipelines that integrate process, 
+trajectory, and preference evaluation for automated reward optimization. 
+Recent developments explore progress-function rewards \cite{sarukkai2024automatedrewardsllmgeneratedprogress} and self-judging mechanisms \cite{simonds2025rlsrreinforcementlearningself}, 
+indicating a shift toward closed-loop, feedback-driven reward generation that unifies language reasoning, multimodal grounding, 
+and sample-efficient optimization. 
 
-
+Nevertheless, existing methods encounter challenges in reward verification, 
+alignment with complex human intentions, and scalability to long-horizon tasks, 
+motivating further research in automated reward engineering.
 
 \subsection{Chain-of-Thought Reasoning Methods}
 
@@ -213,30 +219,33 @@ and efficiency of LLM-based systems.
 Temperature, as a sampling hyperparameter, controls the stochasticity of LLM outputs, thereby influencing creativity, coherence,
 and exploration-exploitation trade-offs.
 
-Recent studies have systematically explored adaptive temperature mechanisms. 
-Zhu et al. \cite{zhu2024hot} proposed AdapT, an adaptive sampling strategy for code generation tasks, 
-which dynamically adjusts decoding temperature based on token-level difficulty to improve generation quality. 
-Zhang et al. \cite{zhang2024edt} introduced Entropy-based Dynamic Temperature (EDT) sampling, 
-which regulates output entropy and diversity in natural language generation. 
-Cecere et al. \cite{cecere2025monte} proposed Monte Carlo Temperature, 
-a robust sampling method to enhance uncertainty quantification under distribution shifts. 
-Chang et al. \cite{chang2023kl} leveraged KL-divergence-guided temperature control to modulate exploration adaptively.
+Recent studies have explored adaptive temperature mechanisms from multiple angles. 
+Zhu et al. \cite{zhu2024hot} proposed AdapT, which adjusts decoding temperature based 
+on token-level difficulty in code generation tasks. 
+In parallel, Zhang et al. \cite{zhang2024edt} developed Entropy-based Dynamic Temperature (EDT) 
+sampling to regulate output diversity in natural language generation. 
+Taking a different approach, Cecere et al. \cite{cecere2025monte} focused on uncertainty quantification, 
+introducing Monte Carlo Temperature for robust sampling under distribution shifts. 
+Chang et al. \cite{chang2023kl} employed KL-divergence to guide temperature control for adaptive 
+exploration.
 
-Beyond static sampling strategies, recent work has begun addressing the broader challenge 
-of adapting reward generation mechanisms to evolving training dynamics. 
-Evstafev \cite{evstafev2025paradox} highlighted limitations of stochastic sampling in tasks requiring structured outputs, 
-motivating the need for more context-aware adaptation techniques. 
-Nakaishi et al. \cite{nakaishi2024critical} further revealed phase-transition behaviors in LLM sampling regimes, 
-informing principled temperature scaling strategies.
+The challenges extend beyond sampling strategies alone. 
+Evstafev \cite{evstafev2025paradox} identified limitations of stochastic sampling in structured 
+output tasks, while Nakaishi et al. \cite{nakaishi2024critical} examined phase-transition behaviors 
+in LLM sampling regimes. 
+These findings suggest that effective adaptation requires understanding the underlying dynamics 
+of the generation process.
 
-For model selection, various strategies have been proposed to enhance efficiency, robustness, and alignment under resource constraints. 
-Zhou et al. \cite{zhou2022mixture} introduced expert choice routing to improve Mixture-of-Experts (MoE) efficiency, 
-while Li et al. \cite{li2025llm} developed preference-conditioned dynamic routing for cost-effective LLM generation. 
-Hu et al. \cite{hu2024dynamic} presented Dynamic Ensemble Reasoning to integrate outputs from multiple specialized LLMs, enhancing robustness. 
-Li et al. \cite{li2025revisiting} revisited self-consistency decoding from a distributional alignment perspective, 
-offering insights into stable expert aggregation.
+In the realm of model selection, researchers have pursued efficiency and robustness through 
+various mechanisms. Zhou et al. \cite{zhou2022mixture} enhanced Mixture-of-Experts efficiency 
+with expert choice routing, whereas Li et al. \cite{li2025llm} developed preference-conditioned 
+dynamic routing for cost-effective generation. Hu et al. \cite{hu2024dynamic} integrated outputs 
+from multiple specialized LLMs through Dynamic Ensemble Reasoning. Li et al. \cite{li2025revisiting} 
+reconsidered self-consistency decoding from a distributional alignment perspective, 
+contributing to our understanding of expert aggregation strategies.
 
-Despite recent advances, temperature adaptation has mainly aimed at enhancing generative diversity and calibration, 
+Despite recent advances, temperature adaptation has mainly aimed at enhancing generative diversity 
+and calibration, 
 while model selection focuses on efficiency and specialization. 
 Extending these techniques to reward generation offers a promising direction for reinforcement learning.
 
@@ -247,7 +256,7 @@ strategy to generate interpretable and adaptive reward functions for reinforceme
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.95\linewidth]{Figures/dycot-re-architecture.png}
+    \includegraphics[width=0.95\linewidth]{Figures/dycot-re-architecture.pdf}
     \caption{DyCoT-RE framework integrating CoT reasoning, dynamic temperature adjustment, and model selection in an evolutionary optimization loop.}
     \label{fig:architecture}
 \end{figure*}
@@ -315,7 +324,7 @@ to enhance reward function generation and RL performance.
 
 \begin{figure*}[t]
     \centering
-    \includegraphics[width=0.95\linewidth]{Figures/dycot-re-control-flow.png}
+    \includegraphics[width=0.95\linewidth]{Figures/dual_6.pdf}
     \caption{DyCoT-RE control flow integrating temperature modulation and model selection within CoT iterative reasoning.}
     \label{fig:control-flow}
 \end{figure*}
@@ -472,8 +481,7 @@ Standard benchmarks include CartPole, BipedalWalker, and Ant,
 covering discrete control tasks and high-dimensional continuous locomotion.
 
 To assess performance on novel environments beyond pretrained knowledge, we introduce SpaceMining,
-a custom environment with multi-objective resource collection, sparse rewards, 
-and dynamic energy constraints.
+a custom environment with multi-objective resource collection and dynamic energy constraints.
 Unlike standard environments that LLMs may encounter during pretraining, 
 SpaceMining tests whether reward design can succeed through pure reasoning rather than prior knowledge.
 
@@ -512,8 +520,10 @@ Reward functions are synthesized by DyCoT-RE using local LLMs served via Ollama.
 
 Final performance metrics are computed as the mean over ten test episodes with different random seeds.
 
-\begin{table}[htbp]
-\centering
+\begin{table}[ht]
+    \centering
+    \scriptsize % 小字号
+    \setlength{\tabcolsep}{4pt} % 紧凑列间距
 \scriptsize
 \caption{Task specifications for evaluated reinforcement learning environments.}
 \label{tab:env_specs}
@@ -538,11 +548,12 @@ SpaceMining (Custom) & 53 / 3 (cont) & 1200 & Navigation \\
     We compare DyCoT-RE against Human-designed and Eureka baselines across all evaluated environments, observing consistent performance gains. The advantage becomes more prominent as task complexity and generalization difficulty increase.
 
     Figure~\ref{fig:bar_comparison} summarizes the final average rewards across all environments. DyCoT-RE consistently achieves the highest performance, followed by Eureka, with human-designed rewards showing the lowest performance. The performance gap increases with task complexity, from modest improvements in CartPole and BipedalWalker to substantial advantages in Ant and SpaceMining. 
-    These results demonstrate DyCoT-RE's effectiveness across diverse environments, particularly when facing sparse feedback and high-dimensional state-action spaces that challenge traditional reward design approaches.
+    These results demonstrate DyCoT-RE's effectiveness across diverse environments, particularly when dealing with high-dimensional state-action spaces, complex dynamics, and multi-objective constraints that challenge traditional reward design approaches. DyCoT-RE’s dynamic reasoning and adaptive reward synthesis enable both rapid early learning and sustained progress under these challenging settings. 
+
 
     \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.9\linewidth]{Figures/bar_comparison_5.pdf}
+    \includegraphics[width=0.9\linewidth]{Figures/bar_comparison_8.pdf}
     \caption{Final average rewards across environments: DyCoT-RE (blue), Eureka (light grass), and Human-designed (dark grass).}
     \label{fig:bar_comparison}
     \end{figure}
@@ -551,7 +562,7 @@ SpaceMining (Custom) & 53 / 3 (cont) & 1200 & Navigation \\
     
     \begin{figure}[ht]
     \centering
-    \includegraphics[width=0.9\linewidth]{Figures/reward_episode_curve_6.pdf}
+    \includegraphics[width=0.9\linewidth]{Figures/reward_episode_curve_8.pdf}
     \caption{Learning curves across environments. DyCoT-RE exhibits consistent advantages in stability and long-term reward growth, especially in complex settings.}
     \label{fig:learning_curves}
     \end{figure}
@@ -560,7 +571,7 @@ SpaceMining (Custom) & 53 / 3 (cont) & 1200 & Navigation \\
     Sample Efficiency measures the number of timesteps required to reach a threshold reward, defined as 80\% of the task-specific maximum score. Success Rate indicates the proportion of runs that eventually exceed this threshold. Late Gain quantifies the reward improvement from the early performance plateau to the final evaluation, reflecting long-term optimization potential.
 
     
-    \begin{table}[htbp]
+\begin{table}[ht]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{4pt}
@@ -605,12 +616,12 @@ Task & Method & Sample Eff. $\downarrow$ & Succ. Rate $\uparrow$ & Late Gain $\u
 \end{table}
     
 
-    DyCoT-RE achieves the best  performance in all tasks. It learns faster, generalizes more reliably, and continues improving beyond early convergence. In complex environments like Ant and SpaceMining, it shows especially large gains in late-stage performance, where static baselines tend to stall or regress.
+DyCoT-RE achieves the best  performance in all tasks. It learns faster, generalizes more reliably, and continues improving beyond early convergence. In complex environments like Ant and SpaceMining, it shows especially large gains in late-stage performance, where static baselines tend to stall or regress.
 
-    These results highlight DyCoT-RE’s key strength: its dynamic reasoning and adaptive reward synthesis enable both rapid early learning and sustained progress, even under sparse or high-dimensional settings. 
+These results highlight DyCoT-RE's key strength: its dynamic reasoning and adaptive reward synthesis enable both rapid early learning and sustained progress, even under complex or high-dimensional settings.
 
-    The results indicate that DyCoT-RE provides clear advantages in scenarios where predefined reward rules or static reasoning approaches are insufficient to capture evolving task demands. Its strength lies in dynamically decomposing and optimizing reward components as training progresses, particularly under sparse, high-dimensional, or novel task conditions. As task complexity grows, the performance gap expands, underscoring DyCoT-RE's value as a general-purpose, scalable reward engineering solution.
-    
+The results indicate that DyCoT-RE provides clear advantages in scenarios where predefined reward rules or static reasoning approaches are insufficient to capture evolving task demands. Its strength lies in dynamically decomposing and optimizing reward components as training progresses, particularly under complex, high-dimensional, or novel task conditions. As task complexity grows, the performance gap expands, underscoring DyCoT-RE's value as a general-purpose, scalable reward engineering solution.
+
 \subsection{Ablation Study}
 \label{sec:ablation}
 
@@ -639,8 +650,7 @@ Figure~\ref{fig:cot_ablation} summarizes reward distributions for both methods a
     In Ant, zero-shot results are narrowly concentrated near baseline values associated with default movement penalties. This indicates that while these reward functions do not collapse, they lack task-driving gradients for effective behavior shaping. In contrast, CoT-based rewards achieve a wider spread toward higher values, reflecting meaningful progress and more informative optimization signals.
     
 
-Taken together, these results illustrate that CoT reasoning reliably improves reward interpretability and training stability, especially in settings with sparse or ambiguous feedback.
-
+Taken together, these results illustrate that CoT reasoning reliably improves reward interpretability and training stability, especially in settings with complex objectives.
 
     
 
@@ -654,28 +664,31 @@ while CoT reasoning was evaluated on all four environments to confirm its genera
 
 This section investigates the effect of temperature settings by sweeping $T \in [0.0, 1.0]$ on the BipedalWalker environment. 
 
-Table~\ref{tab:temp_sweep} summarizes the results, including average fitness, maximum/minimum fitness, standard deviation, and reward efficiency ratio (average fitness divided by standard deviation).
+Table~\ref{tab:temp_sweep} reports BipedalWalker results under different temperature settings, including average and maximum fitness, standard deviation, and reward efficiency ratio. DyCoT-RE achieves the best performance across all metrics, with a large margin in efficiency ratio due to its high average fitness and low variability. 
+Among fixed-temperature settings, moderate values (0.4–0.6) deliver relatively strong results, yet still fall short of DyCoT-RE.
 
 \begin{table}[ht]
 \centering
+\scriptsize % 小字号
+\setlength{\tabcolsep}{4pt} % 紧凑列间距
 \caption{BipedalWalker performance under different temperature settings. \colorbox{skyblue!15}{Blue}: the best value per column, 
 \colorbox{grass!25}{green}: the second-best, \colorbox{grass!15}{green}: the third-best }
 \label{tab:temp_sweep}
 \begin{tabular}{c|c|c|c|c}
 \hline
-Temp & Avg Fit$\uparrow$ & Max/Min Fit $\uparrow$& Std$\downarrow$  & Eff. Ratio$\uparrow$ \\
+Temp & Avg Fit$\uparrow$ & Max Fit $\uparrow$& Std$\downarrow$  & Eff. Ratio$\uparrow$ \\
 \hline
-0.0 & 81.93 & 301.15/-53.01 & 148.67 & 0.55 \\
-0.1 & 149.56 & 310.94/-33.73 & 155.22 & 0.96 \\
-0.2 & 242.74 & \cellcolor{grass!25}313.60/-20.27 & 125.47 & 1.93 \\
-0.3 & 210.07 & 311.17/-46.69 & 140.49 & 1.50 \\
-0.4 & 244.19 & 311.94/-17.13 & \cellcolor{grass!25}107.02 & \cellcolor{grass!25}2.28 \\
-0.5 & 215.84 & 310.69/-14.25 & 131.01 & 1.65 \\
-0.6 & 248.11 & 312.48/-21.18 & \cellcolor{grass!15}120.45 & \cellcolor{grass!15}2.06 \\
-0.7 & 225.88 & \cellcolor{grass!15}312.42/-12.08 & 131.43 & 1.72 \\
-0.8 & 74.33 & 310.42/-46.72 & 143.91 & 0.52 \\
-0.9 & 145.02 & 310.02/-31.58 & 148.51 & 0.98 \\
-1.0 & 192.38 & 310.40/-39.05 & 138.37 & 1.39 \\
+0.0 & 81.93 & 301.15 & 148.67 & 0.55 \\
+0.1 & 149.56 & 310.94 & 155.22 & 0.96 \\
+0.2 & 242.74 & \cellcolor{grass!25}313.60 & 125.47 & 1.93 \\
+0.3 & 210.07 & 311.17 & 140.49 & 1.50 \\
+0.4 & \cellcolor{grass!15}244.19 & 311.94 & \cellcolor{grass!25}107.02 & \cellcolor{grass!25}2.28 \\
+0.5 & 215.84 & 310.69 & 131.01 & 1.65 \\
+0.6 & \cellcolor{grass!25}248.11 & \cellcolor{grass!15}312.48 & \cellcolor{grass!15}120.45 & \cellcolor{grass!15}2.06 \\
+0.7 & 225.88 & 312.42 & 131.43 & 1.72 \\
+0.8 & 74.33 & 310.42 & 143.91 & 0.52 \\
+0.9 & 145.02 & 310.02 & 148.51 & 0.98 \\
+1.0 & 192.38 & 310.40 & 138.37 & 1.39 \\
 \rowcolor{skyblue!15}
 DyCoT-RE & 292.8 & 315.6/87.2 & 55.2 & 5.30 \\
 \hline
@@ -690,7 +703,7 @@ adapting temperature during training to maintain an effective exploration-exploi
 \subsubsection{Impact of Model Selection}
 
 Finally, we evaluate the impact of DyCoT-RE's dynamic model selection by comparing it against individual static LLM baselines on the BipedalWalker environment. 
-Table~\ref{tab:model_selection} summarizes average fitness, max/min fitness, standard deviation, and reward efficiency ratio (average fitness divided by standard deviation). 
+Table~\ref{tab:model_selection} compares different LLM backends on BipedalWalker in terms of average fitness, peak performance, stability, and reward efficiency. 
 
 DyCoT-RE achieves the highest average fitness with exceptionally low standard deviation and the best efficiency ratio, demonstrating its capability to consistently generate high-quality rewards across diverse sub-tasks. 
 
@@ -698,6 +711,8 @@ In contrast, while codegemma achieves competitive performance, its higher standa
 
 \begin{table}[ht]
 \centering
+\scriptsize % 小字号
+\setlength{\tabcolsep}{4pt} % 紧凑列间距
 \caption{Performance comparison of different LLM backends (N=20) in BipedalWalker. \colorbox{skyblue!15}{Blue}: the best value per column, 
 \colorbox{grass!25}{green}: the second-best}
 \label{tab:model_selection}
@@ -726,7 +741,7 @@ In summary, the ablation study demonstrates that each module—CoT reasoning, te
 \subsection{SpaceMining Performance and Reward Decomposition Analysis}
 \label{sec:space_mining_analysis}
 
-To evaluate DyCoT-RE in an out-of-distribution scenario without task-specific priors, we constructed the SpaceMining environment—a sparse-reward, multi-objective domain involving dynamic hazards, energy constraints, and delayed feedback. This setting challenges the model to formulate effective rewards from natural language alone, testing its semantic generalization and reasoning capabilities.
+To evaluate DyCoT-RE in an out-of-distribution scenario without task-specific priors, we constructed the SpaceMining environment—a multi-objective domain involving dynamic hazards and energy constraints. This setting challenges the model to formulate effective rewards from natural language alone, testing its semantic generalization and reasoning capabilities.
 
 \begin{figure}[ht]
 \centering
@@ -735,17 +750,30 @@ To evaluate DyCoT-RE in an out-of-distribution scenario without task-specific pr
 \label{fig:space_mining_curves}
 \end{figure}
 
-Figure~\ref{fig:space_mining_curves} illustrates the learning trajectory of DyCoT-RE. From early-stage exploration to late-stage optimization, we observe concurrent increases in reward and fitness, with consistent energy regulation and inventory accumulation. These trends reflect reward structures that incentivize planning, efficiency, and safe behavior.
+
+
+Figure~\ref{fig:space_mining_curves} illustrates the learning trajectory of DyCoT-RE. 
+From early-stage exploration to late-stage optimization, we observe concurrent increases in reward and fitness, 
+with consistent energy regulation and inventory accumulation. 
+These trends reflect reward structures that incentivize planning, efficiency, and safe behavior.
+
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.95\linewidth]{Figures/correlation_heatmap.pdf}
 \caption{
-    Dynamic Evolution of Reward Components in DyCoT-RE for SpaceMining}
+    The evolution of normalized reward component contributions in DyCoT-RE for SpaceMining}
 \label{fig:component_evolution}
 \end{figure}
 
-Figure~\ref{fig:component_evolution} illustrates how DyCoT progressively restructures its reward architecture across eight training iterations in the SpaceMining environment. 
+Figure~\ref{fig:component_evolution} shows the relative contribution of each reward component during 
+training iterations. Positive and negative values indicate reinforcement and penalty signals respectively, 
+while zero values with reduced opacity show inactive components. Border colours denote component lifecycle 
+stages including new, maintained, core, and deprecated components, with column labels showing corresponding 
+fitness scores. 
+Component contribution is computed as $\text{Contr}_i = \frac{\overline{r_i}}{\sum_j \overline{r_j}} \times 100\%$, 
+where $\overline{r_i}$ is the average reward from component $i$.
+
 The system begins with a minimal setup focused on mining progress, distance penalties, and energy tracking. 
 As training proceeds, DyCoT introduces new components such as obstacle avoidance in Iteration 3, inventory-based delivery efficiency in Iteration 5, and asteroid discovery incentives in Iteration 7. 
 These additions are not arbitrary but driven by observed performance shifts. 
@@ -755,8 +783,10 @@ The energy management module, on the other hand, steadily increases in importanc
 This dynamic component lifecycle—characterized by incremental expansion, adaptive weighting, and timely deprecation—demonstrates DyCoT’s capacity for modular, interpretable, and performance-aligned reward optimization.
 
 
-\begin{table}[htbp]
+\begin{table}[ht]
     \centering
+    \scriptsize % 小字号
+    \setlength{\tabcolsep}{4pt} % 紧凑列间距
     \caption{DyCoT Strategy Metrics Across Iterative Architectures. 
     \colorbox{skyblue!15}{Blue}: the best value per column, 
 \colorbox{grass!25}{green}: the second-best.}
@@ -785,38 +815,28 @@ In summary, DyCoT-RE exhibits the capacity for iterative reward adaptation. It e
 
 \section{Discussion}
 
-This work presents DyCoT-RE, a reward engineering framework combining Chain-of-Thought reasoning with dual-dynamic optimization strategies.  
-Experiments across four RL tasks show DyCoT-RE consistently outperforms human-designed rewards and automated baselines like Eureka, especially in complex, sparse-reward environments such as Ant and SpaceMining. For simpler tasks like CartPole, gains are smaller due to already dense rewards.
-
-Ablation results highlight that CoT reasoning improves reward interpretability and stability, dynamic temperature adjustment enhances sample efficiency over static settings, and adaptive model selection reduces variance by leveraging multiple LLMs effectively.
-
-Results on the SpaceMining task demonstrate DyCoT-RE’s ability to construct and refine structured reward components in unfamiliar, sparse-reward settings.
-Its progressive adaptation—from simple distance-based incentives to task-specific modules like energy balancing and obstacle avoidance—supports its utility for automated reward design in domains lacking pre-defined metrics.
-
-Despite these strengths, DyCoT-RE has limitations. 
-Its reliance on LLM inference introduces computational overhead compared to static reward functions. 
-While Chain-of-Thought reasoning generally improves reward decomposition quality, 
-the framework's performance remains dependent on the reasoning capabilities of the underlying language models. 
-Additionally, the current approach relies on general-purpose LLMs that may not be optimized for reward engineering tasks, 
-potentially limiting the quality and consistency of generated reward structures.
-
-Future work could explore several promising directions. 
-First, training specialized language models fine-tuned specifically for reward function generation may improve both efficiency and performance by better understanding RL terminology and common reward patterns.
-Second, integrating multi-modal inputs such as visual demonstrations or trajectory examples could enhance reward specification for complex tasks beyond natural language descriptions.
-Third, extending the framework to handle hierarchical reward structures and temporal reward shaping could address long-horizon planning challenges.
-Finally, investigating transfer learning mechanisms to leverage successful reward designs across similar environments may reduce computational costs in new domains.
+This work presents DyCoT-RE, a reward engineering framework that integrates Chain-of-Thought reasoning with dual-dynamic optimization strategies for automated reward function design. Our experimental evaluation across four RL environments demonstrates consistent performance improvements over human-designed rewards and existing automated baselines, with the most significant gains observed in complex, multi-objective environments.
 
 
-DyCoT-RE presents a framework that integrates structured reasoning with adaptive optimization for automated reward design. The experimental results demonstrate its effectiveness in improving reward function quality across environments of varying complexity.
+Three findings emerge from our evaluation. First, Chain-of-Thought decomposition improves reward interpretability and stability by breaking complex objectives into manageable components. 
+Second, dynamic strategies outperform static configurations: adaptive temperature control balances exploration-exploitation better than fixed settings, while model selection leverages diverse LLM strengths for higher performance and consistency. 
+Third, SpaceMining results demonstrate DyCoT-RE's ability to generate effective reward functions even in unfamiliar environments, suggesting that structured reasoning can compensate for the absence of domain-specific priors.
+
+DyCoT-RE introduces computational overhead and depends on underlying LLM capabilities. Evaluation is limited to four environments, and the framework uses general-purpose models not optimized for reward engineering. 
+Future research could explore specialized models fine-tuned for reward engineering, incorporate multi-modal inputs beyond natural language, expand evaluation to broader environment categories, and develop transfer learning mechanisms to leverage successful reward designs across similar domains.
+
+DyCoT-RE demonstrates that combining structured reasoning with adaptive optimization offers a promising direction for scalable automated reward engineering, particularly in complex RL domains where traditional approaches prove insufficient.
+
 \section{Conclusion}
 
 This paper introduces DyCoT-RE, a framework that addresses the challenge of automated reward function design in reinforcement learning. 
 The key innovation lies in combining structured reasoning through Chain-of-Thought prompting with adaptive optimization mechanisms that dynamically adjust both temperature and model selection during training.
 
 The framework's effectiveness is validated across environments ranging from simple control tasks to complex resource collection scenarios, 
-demonstrating particular advantages in sparse-reward settings where traditional reward design proves challenging. 
-The results highlight its potential as a scalable solution for reinforcement learning tasks requiring structured and evolving reward design.
+demonstrating particular advantages in multi-objective settings where traditional reward design proves challenging. 
+The results highlight its potential as a scalable solution for reinforcement learning tasks requiring structured and evolving reward design 
+for complex objectives.
 
-\bibliography{adaptive_cot_reward_rl} % 不需要加.bib扩展名
+\bibliography{adaptive_cot_reward_rl} 
 
 \end{document}
