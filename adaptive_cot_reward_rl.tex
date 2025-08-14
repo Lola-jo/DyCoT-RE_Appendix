@@ -71,11 +71,13 @@ Designing effective reward functions remains a challenge in applying reinforceme
 This paper proposes DyCoT-RE, a reward engineering framework that integrates Chain-of-Thought (CoT) reasoning with a dual-dynamic 
 optimization strategy to automate and enhance reward function design.
 The framework uses structured CoT reasoning throughout training to generate and refine structured reward code in each iteration.
-It further incorporates a dual-dynamic optimization mechanism: a temperature adjustment strategy that modulates the sampling temperature 
-based on policy entropy trends,
-and a model switching strategy that allocates language models with different capabilities to produce distinct reward components.
-Evaluations on CartPole, BipedalWalker, Ant, and a custom SpaceMining environment show DyCoT‑RE achieves higher average rewards and faster 
-convergence compared to human-designed baselines and non‑CoT approaches as well as single-optimization approaches.
+It further incorporates a dual-dynamic optimization mechanism, 
+comprising a temperature adjustment module that modulates the sampling temperature based on policy entropy trends, 
+and a model switching module that allocates language models with different capabilities to produce distinct reward components.
+Evaluations across four reinforcement learning environments—CartPole, BipedalWalker, Ant, and a custom SpaceMining environment 
+absent from common reinforcement learning environments and large language model pretraining corpora—show that DyCoT-RE achieves 
+consistently higher average rewards and faster learning compared to human-designed and non-CoT baselines, 
+as well as single-optimization variants.
 
 
 \end{abstract}
@@ -181,9 +183,8 @@ Recent developments explore progress-function rewards \cite{sarukkai2024automate
 indicating a shift toward closed-loop, feedback-driven reward generation that unifies language reasoning, multimodal grounding, 
 and sample-efficient optimization. 
 
-Nevertheless, existing methods encounter challenges in reward verification, 
-alignment with complex human intentions, and scalability to long-horizon tasks, 
-motivating further research in automated reward engineering.
+Building on these developments, future research can explore how large language models can more effectively 
+bridge human intent and reinforcement learning objectives, leverage feedback for reward generation, and address increasingly complex real-world tasks.
 
 \subsection{Chain-of-Thought Reasoning Methods}
 
@@ -489,7 +490,7 @@ SpaceMining tests whether reward design can succeed through pure reasoning rathe
 
 To contextualize DyCoT-RE's performance, we evaluate against two primary baselines:
 
-(1) Human-designed rewards: Manually crafted reward functions from standard Gymnasium implementations for CartPole, BipedalWalker, and Ant, plus custom rules for SpaceMining.
+(1) Human-designed rewards: Manually crafted reward functions from standard Gymnasium\cite{towers2024gymnasiumstandardinterfacereinforcement} implementations for CartPole, BipedalWalker, and Ant, plus custom rules for SpaceMining.
 
 (2) Eureka: 
 A LLM-based framework for automated reward synthesis, using code generation and symbolic verification. We adapt its pipeline to Gymnasium-based evaluations for fair comparison.
@@ -512,7 +513,7 @@ These comparisons allow us to isolate the impact of CoT-based reasoning and the 
 \subsubsection{Implementation Details}
 
 
-We evaluate DyCoT-RE on three environments from the Gymnasium\footnote{\url{https://gymnasium.farama.org}} suite—CartPole-v1\footnote{\url{https://gymnasium.farama.org/environments/classic_control/cart_pole/}}, BipedalWalker-v3\footnote{\url{https://gymnasium.farama.org/environments/box2d/bipedal_walker/}}, and Ant-v5\footnote{\url{https://gymnasium.farama.org/environments/mujoco/ant/}}—alongside a custom-designed SpaceMining environment built to test generalization in unseen domains.
+We evaluate DyCoT-RE on three environments from the Gymnasium suite — CartPole-v1\footnote{\url{https://gymnasium.farama.org/environments/classic_control/cart_pole/}}, BipedalWalker-v3\footnote{\url{https://gymnasium.farama.org/environments/box2d/bipedal_walker/}}, and Ant-v5\footnote{\url{https://gymnasium.farama.org/environments/mujoco/ant/}}—alongside a custom-designed SpaceMining environment built to test generalization in unseen domains.
 
 All experiments use Proximal Policy Optimization (PPO) from Stable-Baselines3 with Adam optimizer, learning rate of 3e-4, batch size 64, GAE parameter $\lambda=0.95$, and discount factor $\gamma=0.999$.
 
@@ -738,7 +739,7 @@ effectively balancing reward quality, stability, and adaptability in complex con
 
 In summary, the ablation study demonstrates that each module—CoT reasoning, temperature adjustment, and model selection—contributes significantly to DyCoT-RE’s superior performance, and their combination leads to synergistic gains.
 
-\subsection{SpaceMining Performance and Reward Decomposition Analysis}
+\subsection{DyCoT-RE in SpaceMining: Results in an LLM-Unseen Environment}
 \label{sec:space_mining_analysis}
 
 To evaluate DyCoT-RE in an out-of-distribution scenario without task-specific priors, we constructed the SpaceMining environment—a multi-objective domain involving dynamic hazards and energy constraints. This setting challenges the model to formulate effective rewards from natural language alone, testing its semantic generalization and reasoning capabilities.
@@ -830,10 +831,10 @@ DyCoT-RE demonstrates that combining structured reasoning with adaptive optimiza
 \section{Conclusion}
 
 This paper introduces DyCoT-RE, a framework that addresses the challenge of automated reward function design in reinforcement learning. 
-The key innovation lies in combining structured reasoning through Chain-of-Thought prompting with adaptive optimization mechanisms that dynamically adjust both temperature and model selection during training.
+The main contribution lies in combining structured reasoning through Chain-of-Thought prompting with adaptive optimization mechanisms that dynamically adjust both temperature and model selection throughout the reward engineering process.
 
-The framework's effectiveness is validated across environments ranging from simple control tasks to complex resource collection scenarios, 
-demonstrating particular advantages in multi-objective settings where traditional reward design proves challenging. 
+Evaluation demonstrates that DyCoT-RE consistently produces effective and stable reward functions across tasks ranging from simple control to complex, 
+multi-objective scenarios, including novel environments unfamiliar to LLMs.
 The results highlight its potential as a scalable solution for reinforcement learning tasks requiring structured and evolving reward design 
 for complex objectives.
 
