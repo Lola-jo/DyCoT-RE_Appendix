@@ -67,18 +67,17 @@
 \address[shu]{Sino-European School of Technology, Shanghai University, Shanghai, China}
 
 \begin{abstract}
-Designing effective reward functions remains a challenge in applying reinforcement learning to real-world tasks.
-This paper proposes DyCoT-RE, a reward engineering framework that integrates Chain-of-Thought (CoT) reasoning with a dual-dynamic 
+Designing effective reward functions remains a challenge in applying reinforcement learning (RL) to real-world tasks.
+This paper proposes DyCoT-RE, a large language model (LLM)-driven reward engineering framework that integrates Chain-of-Thought (CoT) reasoningg with a dual-dynamic 
 optimization strategy to automate and enhance reward function design.
-The framework uses structured CoT reasoning throughout training to generate and refine structured reward code in each iteration.
+The framework uses structured CoT reasoning throughout the reward engineering process to generate and refine structured reward code in each iteration.
 It further incorporates a dual-dynamic optimization mechanism, 
 comprising a temperature adjustment module that modulates the sampling temperature based on policy entropy trends, 
-and a model switching module that allocates language models with different capabilities to produce distinct reward components.
-Evaluations across four reinforcement learning environments—CartPole, BipedalWalker, Ant, and a custom SpaceMining environment 
-absent from common reinforcement learning environments and large language model pretraining corpora—show that DyCoT-RE achieves 
+and a model switching module that dispatches language models with different capabilities to produce distinct reward components.
+Evaluations across four RL environments—CartPole, BipedalWalker, Ant, and a custom SpaceMining environment 
+absent from common RL environments and LLM pretraining corpora—show that DyCoT-RE achieves 
 consistently higher average rewards and faster learning compared to human-designed and non-CoT baselines, 
-as well as single-optimization variants.
-
+as well as single-optimization variants. These results demonstrate its potential as a scalable and adaptive solution for complex, evolving reward design.
 
 \end{abstract}
 
@@ -90,8 +89,8 @@ Reinforcement learning \sep reward engineering \sep large language models \sep c
 
 \section{Introduction}
 
-Reinforcement learning (RL) has achieved impressive results across diverse domains 
-However, as Sutton et al. \cite{sutton1998reinforcement} emphasize, the reward signal is the primary means of specifying task objectives in RL, making its design critical to achieving desired behaviors.
+Reinforcement learning has achieved impressive results across diverse domains. 
+Yet, as Sutton et al. \cite{sutton1998reinforcement} emphasize, the reward signal is the primary means of specifying task objectives in RL, making its design critical to achieving desired behaviors.
 In practice, translating intended behaviors into precise, effective reward functions remains highly challenging, particularly for tasks involving long-term dependencies 
 \cite{amodei2016concrete}.
 Skalse et al. \cite{skalse2022misspecification} demonstrate that agents often exploit imperfections in reward formulations to maximize proxy objectives in unintended ways, leading to behaviors that optimize the designed reward but undermine true task performance.
@@ -103,13 +102,13 @@ which is labor-intensive and often yields suboptimal generalization to new envir
 As RL applications grow in complexity, there is a pressing need for methods that can automate
 reward design while maintaining interpretability and flexibility.
 
-Recent advances in large language models (LLMs) have demonstrated strong reasoning and generalization capabilities \cite{brown2020language, ouyang2022training}.
+Recent advances in LLMs have demonstrated strong reasoning and generalization capabilities \cite{brown2020language, ouyang2022training}.
 In particular, CoT reasoning enables LLMs to decompose tasks into structured intermediate steps,
 enhancing clarity and alignment with desired objectives.
 This structured reasoning process facilitates reward engineering by translating task descriptions into reward functions with explicitly defined components and objectives.
 
 However, existing CoT-based reward generation approaches typically use static sampling parameters and fixed model configurations,
-which may limit their adaptability during training.
+which may limit their adaptability.
 Recent studies have emphasized the need for dynamic adaptation in LLM-based systems to improve sample efficiency and alignment with task objectives.
 For example, Nguyen et al. \cite{nguyen2024turning} demonstrate that min-p sampling enhances creativity while preserving coherence in narrative generation tasks, while Peeperkorn et al. \cite{peeperkorn2024temperature} analyze temperature as a direct modulator of LLM creativity.
 Moreover, Fedus et al. \cite{fedus2022switch} and Du et al. \cite{du2022glam} show that mixture-of-experts architectures can scale model capacity efficiently via adaptive routing.These findings motivate the integration of temperature modulation with expert model selection as a promising direction for improving reward engineering in LLM-driven systems.
@@ -126,10 +125,10 @@ DyCoT-RE enhances reward function design and improves training efficiency, suppo
 
 We evaluate DyCoT-RE on the standard RL environments CartPole,
 BipedalWalker, and Ant to assess its performance across different control tasks.
-While these environments are widely used, recent studies have raised concerns that large language models may possess latent knowledge about 
+While these environments are widely used, recent studies have raised concerns that LLMs may possess latent knowledge about 
 them from pretraining corpora, potentially leading to prompt leakage and evaluation bias\cite{huang2025thinkbench, qi2024quantifying, lu2024mental}. 
 To address this concern and test DyCoT-RE’s true generalization capabilities, we additionally introduce a custom-designed environment, 
-SpaceMining\footnote{Project website: \url{https://lola-jo.github.io/space_mining/}.}, which is explicitly excluded from pretraining.
+SpaceMining\footnote{Project website: \url{https://reveurmichael.github.io/space_mining/}.}, which is explicitly excluded from pretraining.
 Experimental results show that DyCoT-RE consistently achieves higher average rewards 
 and faster convergence than baseline and non-CoT methods across all evaluated environments.
 
@@ -183,7 +182,7 @@ Recent developments explore progress-function rewards \cite{sarukkai2024automate
 indicating a shift toward closed-loop, feedback-driven reward generation that unifies language reasoning, multimodal grounding, 
 and sample-efficient optimization. 
 
-Building on these developments, future research can explore how large language models can more effectively 
+Building on these developments, future research can explore how LLMs can more effectively 
 bridge human intent and reinforcement learning objectives, leverage feedback for reward generation, and address increasingly complex real-world tasks.
 
 \subsection{Chain-of-Thought Reasoning Methods}
@@ -274,9 +273,9 @@ The framework receives four types of inputs: natural language task descriptions 
 environment interfaces that define the state-action space, system-level prompts that impose design constraints 
 on the reward, and implementation instructions that guide executable code generation.
 
-At the core of DyCoT-RE are four specialized large language models, referred to as
-Thinking LLM, Code LLM, Repair LLM, and Analysis LLM. These models, denoted
-respectively as $\mathcal{M}{\text{think}}$, $\mathcal{M}{\text{code}}$, $\mathcal{M}{\text{repair}}$, and $\mathcal{M}{\text{analysis}}$, operate in a
+At the core of DyCoT-RE are four specialized LLMs, referred to as
+Think LLM, Code LLM, Repair LLM, and Analysis LLM. These models, denoted
+respectively as $\mathcal{M}_{\text{think}}$, $\mathcal{M}_{\text{code}}$, $\mathcal{M}_{\text{repair}}$, and $\mathcal{M}_{\text{analysis}}$, operate in a
 closed-loop pipeline that produces and refines reward functions.
 
 Each generated reward function takes the form:
@@ -503,7 +502,7 @@ To evaluate individual contributions within DyCoT-RE, we include the following c
 
 - Fixed temperature: Sampling temperature is held constant throughout training, with results reported across a sweep of static values. 
 
-- Fixed model backend: A single large language model is statically selected for all reward generation, without dynamic model switching.
+- Fixed model backend: A single LLM is statically selected for all reward generation, without dynamic model switching.
 
 These comparisons allow us to isolate the impact of CoT-based reasoning and the dual-dynamic mechanisms in DyCoT-RE.
 
@@ -834,7 +833,7 @@ This paper introduces DyCoT-RE, a framework that addresses the challenge of auto
 The main contribution lies in combining structured reasoning through Chain-of-Thought prompting with adaptive optimization mechanisms that dynamically adjust both temperature and model selection throughout the reward engineering process.
 
 Evaluation demonstrates that DyCoT-RE consistently produces effective and stable reward functions across tasks ranging from simple control to complex, 
-multi-objective scenarios, including novel environments unfamiliar to LLMs.
+multi-objective scenarios, including a novel environment unfamiliar to LLMs.
 The results highlight its potential as a scalable solution for reinforcement learning tasks requiring structured and evolving reward design 
 for complex objectives.
 
