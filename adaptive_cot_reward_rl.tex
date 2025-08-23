@@ -89,8 +89,8 @@ Reinforcement learning \sep reward engineering \sep large language models \sep c
 
 \section{Introduction}
 
-Reinforcement learning has achieved impressive results across diverse domains. 
-\textcolor{red}{Indeed,} as Sutton et al. \cite{sutton1998reinforcement} emphasize, the reward signal is the primary means of specifying task objectives in RL, making its design critical to achieving desired behaviors.
+Reinforcement learning has achieved impressive results across diverse domains, 
+yet as Sutton et al. \cite{sutton1998reinforcement} emphasize, the reward signal is the primary means of specifying task objectives in RL, making its design critical to achieving desired behaviors.
 In practice, translating intended behaviors into precise, effective reward functions remains highly challenging, particularly for tasks involving long-term dependencies 
 \cite{amodei2016concrete}.
 Skalse et al. \cite{skalse2022misspecification} demonstrate that agents often exploit imperfections in reward formulations to maximize proxy objectives in unintended ways, leading to behaviors that optimize the designed reward but undermine true task performance.
@@ -434,15 +434,39 @@ where $R_{\tau,M}(s,a)$ denotes the reward function generated under temperature 
 \subsection{Experimental Setup}
 
 
-DyCoT-RE is evaluated on four reinforcement learning environments,
-which span diverse task difficulties, action spaces, and complexity levels.
-Standard benchmarks include CartPole, BipedalWalker, and Ant,
-covering discrete control tasks and high-dimensional continuous locomotion.
+DyCoT-RE is evaluated on four reinforcement learning environments, which span diverse task difficulties, action spaces, and complexity levels. We select three standard benchmarks from the Gymnasium suite—CartPole-v1\footnote{\url{https://gymnasium.farama.org/environments/classic_control/cart_pole/}}, BipedalWalker-v3\footnote{\url{https://gymnasium.farama.org/environments/box2d/bipedal_walker/}}, and Ant-v5\footnote{\url{https://gymnasium.farama.org/environments/mujoco/ant/}}—alongside a custom-designed SpaceMining environment. The specifications for these environments are summarized in Table \ref{tab:env_specs}.
 
 To assess performance on novel environments beyond pretrained knowledge, we introduce SpaceMining,
 a custom environment with multi-objective resource collection and dynamic energy constraints.
 Unlike standard environments that LLMs may encounter during pretraining, 
 SpaceMining tests whether reward design can succeed through task understanding rather than prior knowledge.
+
+\subsubsection{Implementation Details}
+
+All experiments use Proximal Policy Optimization (PPO) from Stable-Baselines3 with Adam optimizer, learning rate of 3e-4, batch size 64, GAE parameter $\lambda=0.95$, and discount factor $\gamma=0.999$.
+
+DyCoT-RE generates reward functions using local LLMs served via Ollama, sampling eight reward candidates in parallel at each CoT iteration.
+
+Final performance metrics are computed as the mean over ten test episodes with different random seeds.
+
+\begin{table}[ht]
+    \centering
+    \scriptsize % 小字号
+    \setlength{\tabcolsep}{4pt} % 紧凑列间距
+\scriptsize
+\caption{Task specifications for evaluated RL environments.}
+\label{tab:env_specs}
+\begin{tabular}{lccc}
+\toprule
+Environment & State/Action Dims & Episode Steps \\
+\midrule
+CartPole-v1 & 4 / 1 discrete & 500 \\
+BipedalWalker-v3 & 24 / 4 continuous & 1600 \\
+Ant-v5 & 111 / 8 continuous & 1600 \\
+SpaceMining-custom & 53 / 3 continuous & 1200 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsubsection{Baselines and Comparison Strategies}
 
@@ -465,40 +489,11 @@ To evaluate individual contributions within DyCoT-RE, we include the following c
 
 - Single model: A single LLM handles all reward generation tasks without dynamic model selection.
 
-These comparisons isolate the contributions of CoT-based reasoning and the dual-dynamic mechanisms.
+These comparisons isolate the contributions of CoT-based reasoning and the dual-dynamic mechanisms. For additional implementation specifications and supplementary materials, please refer to the Appendix.\footnote{The full appendix is available at \url{https://github.com/Lola-jo/DyCoT-RE_Appendix/blob/main/appendix.pdf}}
 
 
 
 
-\subsubsection{Implementation Details}
-
-
-We evaluate DyCoT-RE on three environments from the Gymnasium suite — CartPole-v1\footnote{\url{https://gymnasium.farama.org/environments/classic_control/cart_pole/}}, BipedalWalker-v3\footnote{\url{https://gymnasium.farama.org/environments/box2d/bipedal_walker/}}, and Ant-v5\footnote{\url{https://gymnasium.farama.org/environments/mujoco/ant/}}—alongside a custom-designed SpaceMining environment for evaluating performance in unseen domains.
-
-All experiments use Proximal Policy Optimization (PPO) from Stable-Baselines3 with Adam optimizer, learning rate of 3e-4, batch size 64, GAE parameter $\lambda=0.95$, and discount factor $\gamma=0.999$.
-
-DyCoT-RE generates reward functions using local LLMs served via Ollama, sampling eight reward candidates in parallel at each CoT iteration.
-
-Final performance metrics are computed as the mean over ten test episodes with different random seeds.
-
-\begin{table}[ht]
-    \centering
-    \scriptsize % 小字号
-    \setlength{\tabcolsep}{4pt} % 紧凑列间距
-\scriptsize
-\caption{Task specifications for evaluated RL environments.}
-\label{tab:env_specs}
-\begin{tabular}{lccc}
-\toprule
-Environment & State/Action Dims & Episode Steps \\
-\midrule
-CartPole-v1 & 4 / 1 discrete & 500 \\
-BipedalWalker-v3 & 24 / 4 continuous & 1600 \\
-Ant-v5 & 111 / 8 continuous & 1600 \\
-SpaceMining & 53 / 3 continuous & 1200 \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 
 

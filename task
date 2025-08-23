@@ -1,0 +1,148 @@
+Space Mining Environment Task Description (Reward Function Perspective)
+1. Task Objective
+
+The agent controls a mining spacecraft in a two-dimensional environment with the goal of:
+
+Safely navigating while minimizing collisions with obstacles and boundaries.
+
+Detecting and harvesting asteroids that enter its sensor field of view.
+
+Transporting collected resources back to the mothership for delivery.
+
+Maximizing total delivered resources within limited energy and time.
+
+2. Constraints
+
+Collision Constraint: Collisions are penalized but do not immediately terminate the episode. This allows the agent to recover from mistakes while still being strongly discouraged from unsafe navigation.
+
+Energy Constraint: Actions consume energy, and depletion leads to episode termination.
+
+Capacity Constraint: The spacecraft has a limited storage capacity; resources must be delivered before mining can continue.
+
+Perception Constraint: The agent can only perceive asteroids and obstacles within its sensor range.
+
+3. Reward Function Design Principles
+
+The reward function should balance safety, productivity, and efficiency:
+
+Safety (highest priority)
+
+Collisions: negative reward proportional to severity or frequency.
+
+Maintaining safe distance from obstacles: optional small positive reward to encourage proactive avoidance.
+
+Productivity
+
+Mining reward: positive reward proportional to the amount of resources harvested.
+
+Delivery reward: larger positive reward for successfully delivering resources to the mothership.
+
+Mining-delivery cycle: emphasized as the primary source of cumulative reward.
+
+Efficiency
+
+Step penalty: small negative reward per timestep to discourage idling.
+
+Energy penalty: negative reward proportional to energy consumption.
+
+Progress reward (optional): small shaping reward for reducing distance to an asteroid or mothership to mitigate sparse rewards.
+
+4. Success Criteria
+
+A successful agent policy should:
+
+Exhibit near-complete obstacle avoidance by learning that collisions are costly.
+
+Efficiently mine asteroids when they appear within its perception range.
+
+Successfully perform repeated mining–delivery cycles.
+
+Maximize long-term reward under energy and time constraints.
+
+5. Rationale for Design
+
+Collision not being a terminal condition reduces sparsity of training signals, allowing the agent to learn safe navigation without frequent premature termination.
+
+Intermediate rewards (mining, progress, avoidance) prevent over-reliance on sparse delivery rewards.
+
+Balanced weighting ensures that safety is prioritized over productivity, and productivity over efficiency, aligning agent behavior with the intended task objectives.
+
+
+
+
+ def compute_reward(self, action, observation, info, **kwargs):
+        # Initialize custom attributes
+        if not hasattr(self, 'obstacle_collisions'):
+            self.obstacle_collisions = 0
+        if not hasattr(self, 'mining_successes'):
+            self.mining_successes = 0
+        if not hasattr(self, 'delivery_successes'):
+            self.delivery_successes = 0
+    
+        # Constants
+        SPEED_LIMIT = 10.0
+        MINING_REWARD = 50.0
+        DELIVERY_REWARD = 100.0
+        OBSTACLE_COLLISION_PENALTY = -20.0
+        BOUNDARY_COLLISION_PENALTY = -10.0
+        ENERGY_DECAY_PENALTY = -0.1
+        TIME_STEP_REWARD = 0.01
+    
+        # Calculate rewards
+        mining_reward = MINING_REWARD * kwargs["mining_success"]
+        delivery_reward = DELIVERY_REWARD * kwargs["delivery_success"]
+        obstacle_collision_penalty = OBSTACLE_COLLISION_PENALTY * kwargs["obstacle_collisions"]
+        boundary_collision_penalty = BOUNDARY_COLLISION_PENALTY * kwargs["boundary_collision"]
+        energy_decay_penalty = ENERGY_DECAY_PENALTY * (self.agent_energy - SPEED_LIMIT)
+        time_step_reward = TIME_STEP_REWARD
+    
+        # Calculate total reward
+        total_reward = mining_reward + delivery_reward + obstacle_collision_penalty + boundary_collision_penalty + energy_decay_penalty + time_step_reward
+    
+        # Increment custom attributes
+        self.obstacle_collisions += kwargs["obstacle_collisions"]
+        self.mining_successes += kwargs["mining_success"]
+        self.delivery_successes += kwargs["delivery_success"]
+    
+        # Create reward dictionary
+        reward_info = {
+            "mining_reward": mining_reward,
+            "delivery_reward": delivery_reward,
+            "obstacle_collision_penalty": obstacle_collision_penalty,
+            "boundary_collision_penalty": boundary_collision_penalty,
+            "energy_decay_penalty": energy_decay_penalty,
+            "time_step_reward": time_step_reward,
+            "total_reward": total_reward,
+        }
+    
+        return total_reward, reward_info
+
+
+
+
+        # ... step方法末尾，在return observation, reward, terminated, truncated, info之前
+if terminated or truncated:
+    print(f"Episode ended. Total collisions: {self.collision_count}")
+return observation, reward, terminated, truncated, info
+
+
+if terminated or truncated:
+    # 判断结束原因
+    if self.collision_count >= 8:
+        end_reason = "collision_limit"
+    elif self.agent_energy <= 0:
+        end_reason = "energy_depleted"
+    elif truncated:
+        end_reason = "timeout"
+    elif np.all(self.asteroid_resources <= 0.1):
+        end_reason = "all_asteroids_depleted"
+    else:
+        end_reason = "other"
+    # 写入json
+    result = {
+        "episode": self.steps_count,
+        "collisions": self.collision_count,
+        "end_reason": end_reason
+    }
+    with open("results.json", "a") as f:
+        f.write(json.dumps(result) + "\n")
