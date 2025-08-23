@@ -1,28 +1,27 @@
-\documentclass{article}  % 使用单栏文档类
+\documentclass{article}
+
 \usepackage[utf8]{inputenc}
 \usepackage[
-    left=2.5cm,    % 左边距
-    right=2.5cm,   % 右边距
-    top=2cm,       % 上边距减小到2cm
-    bottom=2cm,    % 下边距减小到2cm
-    includeheadfoot % 包含页眉页脚在内
+    left=2.5cm,
+    right=2.5cm,
+    top=2cm,
+    bottom=2cm,
+    includeheadfoot
 ]{geometry}
-\usepackage{cite}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
-\usepackage{graphicx}
-\usepackage{textcomp}
-\usepackage{xcolor}
-\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\setlength{\parindent}{1em} 
 \usepackage{hyperref}
 \usepackage{booktabs}
-\usepackage{makecell}
-\usepackage{multirow}
-\usepackage{algorithm}
-\usepackage{algorithmic}
 \usepackage{listings}
-\usepackage{color}
 \usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{unicode-math}
+
+
+% Code style configuration
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
 \definecolor{mauve}{rgb}{0.58,0,0.82}
@@ -41,785 +40,393 @@
     stringstyle=\color{mauve},
     breaklines=true,
     breakatwhitespace=true,
-    escapeinside=``,
     tabsize=4,
     extendedchars=false,
     captionpos=t,
-    linewidth=\textwidth,     % 使用全部文本宽度
-    xleftmargin=1em,          % 减小左边距
-    xrightmargin=1em,         % 减小右边距
+    linewidth=\textwidth,
+    xleftmargin=1em,
+    xrightmargin=1em,
     resetmargins=true
 }
 
-\DeclareRobustCommand*{\IEEEauthorrefmark}[1]{%
-    \raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{#1}}}}
-
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
-
-\setlength{\LTleft}{0pt}     % 左边距设为0
-\setlength{\LTright}{0pt}    % 右边距设为0
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
 
 \begin{document}
 
-
 \appendix
 
-\section{Algorithm}
-    \indent The reward engineering process with Chain-of-Thought (CoT) reasoning is detailed in Algorithm 1. This algorithm presents a systematic approach to iteratively improve reward functions through a combination of task-oriented initialization and reflection-guided refinement.
+\section{Specialized LLM Chain-of-Thought Framework}
+
+Our reward engineering pipeline employs four expert LLMs that work in a structured chain-of-thought workflow: Think LLM ($\mathcal{M}_{\text{think}}$), Code LLM ($\mathcal{M}_{\text{code}}$), Analysis LLM ($\mathcal{M}_{\text{analysis}}$), and Repair LLM ($\mathcal{M}_{\text{repair}}$). This architecture ensures systematic reward function generation by decomposing the complex task into distinct, focused stages with clear role boundaries and information flow constraints.
+
+The chain-of-thought approach prevents common issues in single-model reward generation, such as inconsistent reasoning, code-logic misalignment, and insufficient error handling. Each LLM operates within strict role constraints to maintain workflow integrity. $\mathcal{M}_{\text{think}}$ focuses purely on conceptual analysis without code implementation, $\mathcal{M}_{\text{code}}$ translates structured analysis into executable functions, $\mathcal{M}_{\text{analysis}}$ leverages performance data for systematic improvements, and $\mathcal{M}_{\text{repair}}$ handles error correction while preserving original design intent.
+
+This modular design enables targeted model selection for each subtask, allowing deployment of reasoning-optimized models for analysis, code-specialized models for implementation, and debugging-focused models for error correction. The structured information flow ensures that each stage builds upon validated outputs from previous stages, creating a robust and interpretable reward generation process.
+
+\subsection{Prompt for Think LLM}
+
+$\mathcal{M}_{\text{think}}$ decomposes natural language task descriptions into structured reward design logic, focusing on objective identification, observable analysis, and component boundaries without code generation.
+
+\begin{lstlisting}[caption=Prompt for $\mathcal{M}_{\text{think}}$ (Think LLM), label=lst:think_prompt]
+You are an expert in reward function design. Your task is to analyze the given reinforcement learning task and provide structured reasoning for reward component design. DO NOT WRITE ANY CODE.
+Follow these analysis steps strictly:
+
+1. **Task & Environment Analysis**
+   - What is the main goal of this task?
+   - What are the key state variables available?
+   - What are the physical and behavioral constraints?
+
+2. **Objective Identification & Prioritization**
+   - Identify the primary objective (most critical for task success)
+   - List 2-3 secondary objectives that support the main goal
+   - Explain the priority ranking and trade-offs between objectives
+
+3. **Reward Component Design Logic**
+   - For each objective, specify which observables should be used
+   - Describe the desired behavior for each component (encourage/discourage)
+   - Suggest normalization approaches (e.g., exponential, clipping, scaling)
+   - Consider balance between exploration and exploitation
+
+4. **Edge Case Analysis**
+   - Identify potential boundary conditions or failure modes
+   - Describe scenarios where the agent might exploit the reward
+   - Suggest safeguards against unintended behaviors
+
+**Input Context:**
+Task Description: {TASK_DESC}
+Environment Code: {ENV_CODE}
+Available Observables: {OBSERVABLES}
+
+**Output Format:**
+Provide detailed reasoning for each section above. Focus on the logic and rationale behind each design decision. This analysis will be used by a code implementation specialist to create the actual reward function.
+\end{lstlisting}
+
+\subsection{Prompt for Code LLM}
+
+$\mathcal{M}_{\text{code}}$ translates structured analysis into executable reward functions, ensuring code validity and environment compatibility.
+
+\begin{lstlisting}[caption=Prompt for $\mathcal{M}_{\text{code}}$ (Code LLM), label=lst:code_prompt]
+You are a reward function implementation specialist. Based on the provided analysis, implement a working compute_reward function. Output ONLY the Python code wrapped in ```python ``` blocks.
+
+**Implementation Requirements:**
+1. Function signature: def compute_reward(self, pos, action, state, terminated):
+2. Return: (total_reward: float, components: Dict[str, float])
+3. Initialize custom attributes: if not hasattr(self, 'attr'): self.attr = init_value
+4. Define constants at function start using uppercase names
+5. Add null checks for inputs to prevent runtime errors
+6. Normalize components using np.exp, np.tanh, or np.clip
+7. Keep individual component values in reasonable ranges [-5, 5]
+
+**Input Analysis from M_think:**
+{ANALYSIS_CONTENT}
+
+**Environment Interface:**
+- pos: Agent position (e.g., pos[0] = x-coordinate)
+- action: Action vector taken by the agent  
+- state: Full observation vector from environment
+- terminated: Boolean indicating episode termination
+
+**Code Constraints:**
+- Use only provided variables (pos, action, state, terminated) and valid self attributes
+- Implement each reward component identified in the analysis
+- Apply appropriate normalization for each component
+- Ensure the function handles edge cases gracefully
+
+Output only the complete compute_reward function implementation.
+\end{lstlisting}
+
+\subsection{Prompt for Analysis LLM}
+
+$\mathcal{M}_{\text{analysis}}$ improves reward functions using training performance data, identifying ineffective components and unintended behaviors.
+
+\begin{lstlisting}[caption=Prompt for $\mathcal{M}_{\text{analysis}}$ (Analysis LLM), label=lst:analysis_prompt]
+You are a performance analysis specialist for reward function optimization. Your task is to enhance the existing reward function based on training results.
+
+Structure your response in two parts:
+
+**Part 1: Performance Analysis**
+Analyze the training metrics and identify:
+- Key performance trends (convergence, plateau, instability patterns)
+- Ineffective reward components (low correlation with success metrics)
+- Unintended agent behaviors (actions that game the reward system)
+- Specific improvement opportunities based on the data
+
+**Part 2: Improved Implementation**
+Provide an updated compute_reward function that addresses the identified issues:
+- Preserve effective components that correlate with task success
+- Modify or remove problematic components
+- Add new components only if clearly justified by performance gaps
+- Maintain code structure and return format
+
+**Input Performance Data:**
+Training Metrics: {TRAINING_METRICS}
+Agent Behavior Observations: {BEHAVIOR_NOTES}
+Current Reward Function: {CURRENT_CODE}
+
+**Optimization Guidelines:**
+- Focus on fitness_score as the primary optimization target
+- Balance component magnitudes to prevent any single component from dominating
+- Address training instability through better normalization
+- Ensure changes align with the original task objectives
+
+Provide both the analysis reasoning and the improved code implementation.
+\end{lstlisting}
+
+\subsection{Prompt for Repair LLM}
+
+$\mathcal{M}_{\text{repair}}$ fixes runtime errors in generated code while preserving the original reward logic and component structure.
+
+\begin{lstlisting}[caption=Prompt for $\mathcal{M}_{\text{repair}}$ (Repair LLM), label=lst:repair_prompt]
+You are a code debugging specialist for reward functions. Fix the runtime error in the provided code without changing the reward logic or adding new features.
+
+**Error Information:**
+Error Type: {ERROR_TYPE}
+Error Message: {ERROR_MSG}
+Error Context: {ERROR_CONTEXT}
+
+**Faulty Code:**
+{FAULTY_CODE}
+
+**Fix Requirements:**
+1. Preserve all original reward components and their intended behavior
+2. Fix only the specific error causing the runtime failure
+3. Maintain the function signature and return format
+4. Use only variables available in the environment interface
+5. Keep all constants and normalization approaches unchanged
+6. Ensure the fixed code handles similar errors in the future
+
+**Available Environment Variables:**
+- pos: Position tuple (pos[0] = x, pos[1] = y)
+- action: Action array from the agent
+- state: Full state observation vector
+- terminated: Episode termination flag
+- self.* attributes: Only those defined in the environment class
+
+**Common Fix Patterns:**
+- Replace undefined variables with correct state indices
+- Add missing hasattr checks for custom attributes
+- Fix array indexing errors with proper bounds checking
+- Correct mathematical operations that cause overflow/underflow
+
+Output only the corrected compute_reward function wrapped in ```python ``` blocks.
+\end{lstlisting}
+
+\section{Dual Dynamic Optimization Mechanisms}
+
+This section presents the two adaptive mechanisms that enhance reward function generation through dynamic parameter adjustment and model selection strategies. The LLM selector (LLMSelector class) and temperature adjustment (EntropyDynamicTemperature class) constitute the dual dynamic adjustment mechanism, each implementing distinct optimization logic to achieve adaptive responses to task requirements and performance feedback.
+\subsection{Performance-Based Model Selection}
+
+The LLM selector dynamically allocates models for each role according to cumulative performance, task-specific requirements, and exploration needs. Specialized model pools are maintained for distinct stages, and multiple strategies are available to balance optimization and diversity.
+
+\subsubsection{Stage-Specific Model Pools}
+
+Different task stages employ dedicated pools of candidate models, though certain models may appear in multiple pools due to overlapping capabilities (e.g., DeepSeek-Coder for both reasoning and debugging). Table~\ref{tab:model_pools} summarizes the mapping.
+
+\begin{table}[H]
+    \centering
+    \caption{Stage-specific model pools for dynamic selection}
+    \label{tab:model_pools}
+    \begin{tabular}{p{6cm} p{9cm}}
+    \toprule
+    \textbf{Stage} & \textbf{Candidate Models} \\
+    \midrule
+    Environment Understanding & DeepSeek-R1, DeepSeek-Coder \\
+    Reward Design & Qwen2.5-Coder, CodeGemma \\
+    Performance Analysis & Gemma-3, Llama-3.1 \\
+    Error Debugging & DeepSeek-Coder, Qwen2.5 \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+
+\subsubsection{Multi-Strategy Selection Logic}
+
+The system implements three complementary selection strategies:
+
+\begin{itemize}
+    \item \textbf{Round-robin:} Ensures fair usage by cycling through models within the stage pool.
+    \item \textbf{Stage-based:} Combines $40\%$ random exploration with $60\%$ preference-based selection from curated lists.
+    \item \textbf{Performance-oriented (default):} Dynamically evaluates and scores models based on effectiveness and reliability.
+\end{itemize}
+
+Algorithm~\ref{alg:model_selection} outlines the decision process, where exploration probability adapts to usage history and enforced switching prevents over-dependence on a single model.
 
 \begin{algorithm}[H]
-\caption{Reward Engineering with Chain-of-Thought}
-\label{alg:reward_engineering}
+\caption{Dynamic Model Selection Algorithm}
+\label{alg:model_selection}
 \begin{algorithmic}[1]
-\STATE Initialize environment and best\_reward = (code='', fitness=$-\infty$)
+\State \textbf{Input:} Current stage $s$, iteration $i$, reward history $H$, strategy $\sigma$
+\State \textbf{Output:} Selected model $m$
 
-\STATE // Iteration 0: Task-oriented CoT
-\STATE prompt = BuildInitialPrompt(task\_description, env\_code)
-\IF{has\_initial\_reward}
-    \STATE prompt += InitialRewardSuggestion()
-\ENDIF
-\STATE reward\_codes = GenerateWithCoT(prompt, n\_samples)
-\STATE best\_reward = EvaluateRewards(reward\_codes)
+\If{$\sigma = \text{round\_robin}$}
+    \State $m \gets \text{models}[s][i \bmod |\text{models}[s]|]$
+\ElsIf{$\sigma = \text{stage\_based}$}
+    \If{$\text{random}() < 0.4$}
+        \State $m \gets \text{random\_choice}(\text{models}[s])$
+    \Else
+        \State $m \gets \text{preferred\_models}[s][i \bmod |\text{preferred\_models}[s]|]$
+    \EndIf
+\Else \Comment{Performance-oriented}
+    \For{each model $m_j$ in $\text{models}[s]$}
+        \State Calculate reward-based performance and stability
+        \State Assign fused score to $\text{scores}[m_j]$
+    \EndFor
+    \State $m \gets \text{argmax}_{m_j} \; \text{scores}[m_j]$ \; with exploration adjustment
+\EndIf
 
-\STATE // Iterations 1+: Reflection-guided CoT
-\FOR{iteration = 1 \TO max\_iterations}
-    \STATE components = AnalyzeComponents(best\_reward)
-    \STATE reflection = CreateReflection(components)
-    \STATE prompt = BuildReflectivePrompt(reflection, components)
-    
-    \STATE // CoT-guided reward generation
-    \STATE reward\_codes = GenerateWithCoT(prompt, n\_samples)
-    \FOR{each code in reward\_codes}
-        \STATE fitness = TrainAndEvaluate(code)
-        \IF{fitness > best\_reward.fitness}
-            \STATE best\_reward = (code, fitness)
-        \ENDIF
-    \ENDFOR
-\ENDFOR
-
-\RETURN best\_reward
-
-\STATE // Chain of Thought generation process
-\STATE analysis = "1. Analysis of previous performance"
-\STATE reasoning = "2. Improvement strategy"
-\STATE implementation = "3. Reward function code"
-\RETURN LLM.generate(analysis + reasoning + implementation)
+\State \textbf{return} $m$
 \end{algorithmic}
 \end{algorithm}
 
-\section{Experimental Details}
+This procedure integrates both exploitation and exploration. The exploration rate begins at $20\%$ and can rise to $50\%$ with repeated model usage, while enforced switching every two iterations further promotes diversity.
 
-\subsection{Task Details}
-    \indent The BipedalWalker-v3 environment from Gymnasium presents a challenging control task where a bipedal robot must learn to walk efficiently across terrain. The agent receives observations including hull angle, angular velocity, horizontal speed, vertical speed, position of joints and joints angular speed, legs contact with ground, and 10 lidar rangefinder measurements. The action space consists of 4 continuous actions controlling the torques applied to the joints. The episode terminates if the robot reaches the goal, falls over, or exceeds the maximum number of steps.
+\subsubsection{Performance Evaluation Framework}
 
-\subsection{Implementation Details}
-    \indent The implementation configuration details are summarized in Table 1, which shows the key parameters used across different components of the system.
+The performance-oriented strategy relies on a multi-component scoring system that balances peak reward, consistency, stability, and historical robustness. The fused score is expressed compactly as:
+
+\[
+\text{FinalScore} = (1-\gamma) \cdot 
+\underbrace{\Big( \underbrace{0.7\cdot \text{MaxReward} + 0.3\cdot \text{MeanReward}}_{\text{BasePerformance}}
+\times (0.8+0.2e^{-\text{StdDev}}) \Big)}_{\text{CurrentScore}}
++ \gamma \cdot \text{HistoricalScore}
+\]
+
+where $\gamma = 0.5$ balances recent and historical performance.  
+This formulation prioritizes maximum reward (70\%) while smoothing results through mean reward (30\%). The exponential stability factor penalizes high variance, and historical integration prevents overfitting to short-term fluctuations.
+
+\subsection{Entropy-Driven Temperature Adjustment}
+
+As shown in Algorithm~\ref{alg:temp_adjustment}, temperature adjustment modulates LLM sampling randomness based on reward component diversity, performance trends, and output confidence to balance exploration and exploitation throughout the optimization process.
+\begin{algorithm}
+\caption{Dynamic Temperature Adjustment}
+\label{alg:temp_adjustment}
+\begin{algorithmic}[1]
+\State \textbf{Input:} Current rewards $R$, historical rewards $H$, current temperature $T_{prev}$
+\State \textbf{Output:} Updated temperature $T_{new}$
+
+\State Calculate entropy: $\text{entropy} \gets \text{KDE\_entropy}(R)$
+\State Calculate confidence: $\text{confidence} \gets 1 / \text{coefficient\_of\_variation}(R)$
+
+\State $\text{temp\_factor} \gets 1.0$
+
+\Comment{Entropy-based adjustment}
+\If{$\text{entropy} < 0.3$}
+    \State $\text{temp\_factor} \gets \text{temp\_factor} \times 1.1$ \Comment{Increase exploration}
+\ElsIf{$\text{entropy} > 0.5$}
+    \State $\text{temp\_factor} \gets \text{temp\_factor} \times 0.9$ \Comment{Decrease exploration}
+\EndIf
+
+\Comment{Confidence-based adjustment}
+\If{$\text{confidence} > 0.8$}
+    \State $\text{temp\_factor} \gets \text{temp\_factor} \times 0.95$ \Comment{High confidence, stabilize}
+\ElsIf{$\text{confidence} < 0.4$}
+    \State $\text{temp\_factor} \gets \text{temp\_factor} \times 1.05$ \Comment{Low confidence, explore}
+\EndIf
+
+\Comment{Performance change adjustment}
+\State $\text{current\_best} \gets \max(R)$
+\State $\text{historical\_best} \gets \max(H)$
+
+\If{$\text{current\_best} < 0.8 \times \text{historical\_best}$}
+    \State $\text{temp\_factor} \gets \text{temp\_factor} \times 2.0$ \Comment{Performance drop, explore more}
+\ElsIf{$\text{current\_best} \geq \text{historical\_best}$}
+    \State $\text{temp\_factor} \gets \text{temp\_factor} \times 0.5$ \Comment{Performance improved, exploit}
+\EndIf
+
+\State $T_{target} \gets T_{prev} \times \text{temp\_factor}$
+\State $T_{new} \gets 0.9 \times T_{prev} + 0.1 \times T_{target}$ \Comment{Momentum smoothing}
+\State $T_{new} \gets \text{clip}(T_{new}, 0.1, 1.0)$ \Comment{Bound temperature}
+
+\State \textbf{return} $T_{new}$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Multi-Dimensional Adjustment Criteria}
+
+Temperature adjustment operates on three key indicators that capture different aspects of generation quality and optimization progress.
+
+Entropy analysis measures reward distribution diversity through kernel density estimation. When entropy falls below 0.3, indicating concentrated distributions that may lead to agent stagnation, temperature increases by 5\% to promote exploration. Conversely, when entropy exceeds 0.5, suggesting dispersed distributions that may cause training instability, temperature decreases by 5\% to enhance consistency.
+
+Confidence measurement evaluates output consistency based on the inverse coefficient of variation. High confidence situations ($CV^{-1}$ > 0.8) trigger temperature reduction (×0.95) to stabilize successful patterns. Low confidence scenarios ($CV^{-1}$ < 0.4) increase temperature (×1.05) to expand the search space and discover better solutions.
+
+Performance tracking compares current results with historical best achievements, triggering significant exploration when performance declines, and favoring exploitation when performance improves.
+
+\subsubsection{Smoothing and Coordination Mechanisms}
+
+Temperature updates employ momentum smoothing to prevent rapid oscillations that could destabilize the generation process. The new temperature combines 90\% of the previous temperature with 10\% of the target adjustment, ensuring gradual transitions. Temperature values are constrained within [0.1, 1.0] to avoid extreme sampling behaviors that could compromise generation quality.
+
+The dual dynamic mechanisms coordinate through shared performance metrics and exploration states. Model selection determines which model to use while temperature adjustment controls how the model outputs, creating synergistic adaptive responses. When model selection favors exploration of new models, temperature adjustment may simultaneously increase randomness to enhance discovery. Conversely, when focusing on high-performing models, temperature typically decreases to stabilize outputs and reinforce exploitation of proven strategies.
+
+\section{Experimental Configuration Details}
+
+This section provides comprehensive implementation specifications for reproducing the experimental setup and ensuring consistent evaluation across different reinforcement learning environments.
+
+\subsection{Environment Setup and Dependencies}
+
+The experimental framework supports multiple RL environments through standardized interfaces and carefully configured dependencies. Table~\ref{tab:env_config} summarizes the key environment specifications.
 
 \begin{table}[htbp]
-    \caption{Implementation Configuration Parameters}
-    \label{tab:config}
-    \begin{center}
-    \begin{tabular}{|l|l|l|}
-    \hline
-    \textbf{Component} & \textbf{Parameter} & \textbf{Value} \\
-    \hline
-    \multirow{7}{*}{Main} 
-    & Backend & ollama \\
-    & Model & llama3.1 \\
-    & Temperature & 0.7 \\
-    & Iterations & 8 \\
-    & Samples & 8 \\
-    & Sleep Time & 5 min \\
-    & Use Initial Reward & false \\
-    \hline
-    \multirow{4}{*}{CoT} 
-    & Enabled & true \\
-    & Performance Weight & 0.7 \\
-    & Thought Process Weight & 0.3 \\
-    & Max Tokens & 2000 \\
-    \hline
-    \multirow{4}{*}{Environment} 
-    & Name & bipedal\_walker \\
-    & Class Name & BipedalWalker \\
-    & Max Episode Steps & 1600 \\
-    & Benchmark & BipedalWalker-v3 \\
-    \hline
-    \multirow{11}{*}{RL Algorithm} 
-    & Type & PPO \\
-    & Policy & MlpPolicy \\
-    & Network Architecture & [64, 64] \\
-    & Learning Rate & 0.0003 \\
-    & Batch Size & 64 \\
-    & N Steps & 2048 \\
-    & N Epochs & 10 \\
-    & Gamma & 0.999 \\
-    & GAE Lambda & 0.95 \\
-    & Clip Range & 0.2 \\
-    & Max Grad Norm & 0.5 \\
-    \hline
-    \multirow{6}{*}{Training} 
-    & Total Timesteps & 1,000,000 \\
-    & Number of Envs & 10 \\
-    & Device & auto \\
-    & State Stack & 1 \\
-    & Eval Episodes & 8 \\
-    & Eval Seeds & [5, 10] \\
-    \hline
-    \multirow{3}{*}{Logging} 
-    & Log Directory & logs/bipedal\_walker \\
-    & Log Level & INFO \\
-    & Save GIF & true \\
-    \hline
+    \centering
+    \caption{Environment Configuration Specifications}
+    \label{tab:env_config}
+    \begin{tabular}{lll}
+    \toprule
+    \textbf{Environment} & \textbf{Action Space} & \textbf{Observation Space} \\
+    \midrule
+    BipedalWalker-v3 & Continuous (4D) & 24D (joints, velocities, LiDAR) \\
+    CartPole-v1 & Discrete (2D) & 4D (cart pos/vel, pole angle/vel) \\
+    Ant-v5 & Continuous (8D) & 111D (joint pos/vel, torso state, contacts) \\
+    SpaceMining-custom & Continuous+Discrete (3D) & 53D (agent state, asteroids, mothership) \\
+    \bottomrule
     \end{tabular}
-    \end{center}
-\end{table}
+    \end{table}
+    
 
-The configuration spans multiple components: the main system settings, Chain of Thought parameters, environment specifications, reinforcement learning algorithm parameters, and training settings. As shown in Table 1, we used the llama3.1 model with a temperature of 0.7 for generation, and implemented PPO as the base RL algorithm with carefully tuned hyperparameters. The CoT component was enabled with a balanced weighting between performance (0.7) and thought process evaluation (0.3).
+    BipedalWalker-v3 utilizes \texttt{gymnasium[box2d]} v0.29.1 with continuous 4-dimensional joint torque control and 24-dimensional observations including joint angles, velocities, and LiDAR sensor data. Episodes terminate after 1600 steps or when the agent falls, with rewards ranging from -100 to over 300 based on forward progress and stability maintenance.
 
-\section{Prompt Details}
-    \indent The prompting system consists of three main stages for reward function generation. Each stage employs specific prompts to guide the generation process. 
+    CartPole-v1 employs \texttt{gymnasium[classic\_control]} v1.3.0 featuring discrete 2-action control (left/right force) and 4-dimensional observations capturing cart position, velocity, pole angle, and angular velocity. Episodes terminate after 500 steps, when the pole angle exceeds 12 degrees, or when the cart position exceeds $\pm$2.4 units. The reward corresponds to the duration of pole balancing, with a maximum of 500.
+    
+    Ant-v5 is implemented with \texttt{gymnasium[mujoco]} v5.3.0, featuring an 8-dimensional continuous action space controlling joint torques. Observations include a 111-dimensional state vector encompassing joint positions/velocities, torso orientation, and contact sensor readings. Episodes terminate if the torso falls or becomes unstable. The reward function combines forward velocity, survival bonus, and control cost, typically ranging from 0 to 6000.
+    
+    SpaceMining-v1 is a custom-designed environment adhering to the \texttt{gymnasium} interface. The observation space is 53-dimensional, integrating agent state (position, velocity, energy, inventory), asteroid features (up to 15 visible asteroids with relative positions and resource amounts), and mothership position. The action space consists of two continuous thrust controls and a binary mining action. Episodes terminate after 2000 steps or on collision. The reward function provides positive feedback proportional to mined resources and penalties for collisions and energy depletion.
+    
+    Evaluation consistency is maintained through deterministic seeding strategies. Training employs randomized seeds per iteration for robustness, while evaluation uses fixed seeds [5, 10, 15, 20, 25] across all experiments. The software stack requires Python 3.8+, PyTorch 1.12+, and CUDA 11.6+ for GPU acceleration, with CUDA-compatible hardware featuring at least 8GB VRAM recommended for optimal performance.
+    
+\subsection{Training Pipeline Configuration}
 
-\subsection{Stage 1: Base Prompts and Task Context}
-    \indent The first stage combines foundational system prompts with task-specific context. Table 2 and Table 3 present the initial system prompt and coding instructions that form the foundation of our approach. These base prompts establish the core requirements and constraints for reward function generation.
-    \indent Following the base prompts, we define the specific task requirements and environment context. For the BipedalWalker task, this includes the task description (Table 4), environment implementation details (Table 5), and an optional initial reward template (Table 6). These components provide crucial details for the reward function design and establish the baseline implementation context.
+The reinforcement learning training pipeline employs Proximal Policy Optimization (PPO) from Stable-Baselines3 v2.0.0 as the base algorithm. Table~\ref{tab:training_config} details the standardized hyperparameters used across all environments.
 
-\begin{table*}[htbp]
-    \caption{Base System Prompts}
-    \begin{center}
-    \begin{tabular}{|p{0.98\textwidth}|}
-    \hline
-    \textbf{Initial System Prompt} \\
-    You are a reward engineer writing effective reward functions for reinforcement learning tasks. \\
-    Your goal is to create a reward function to help the agent learn the task described in text. \\
-    Use relevant environment variables as inputs. Example signature: \\
-    \texttt{def compute\_reward(self, ...):} \\
-    \texttt{\quad return reward, \{\}} \\
-    Do not use type hints. Return type: float, Dict[str, float]. \\
-    \hline 
+\begin{table}[htbp]
+    \centering
+    \caption{PPO Training Configuration Parameters}
+    \label{tab:training_config}
+    \begin{tabular}{ll}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    Policy Architecture & MlpPolicy [64, 64] \\
+    Learning Rate & 3e-4 (linear decay) \\
+    Batch Size & 64 samples \\
+    Discount Factor ($\gamma$) & 0.999 \\
+    GAE Lambda ($\lambda$) & 0.95 \\
+    PPO Clip Range & 0.2 \\
+    Optimization Epochs & 10 per update \\
+    Value Function Loss & MSE (coef: 0.5) \\
+    Entropy Coefficient & 0.01 \\
+    Training Duration & 1M timesteps/iteration \\
+    Evaluation Frequency & Every 10K timesteps \\
+    Evaluation Episodes & 10 per checkpoint \\
+    \bottomrule
     \end{tabular}
-    \end{center}
-    \label{tab:base_prompts}
-    \end{table*}
+    \end{table}
 
-\begin{table*}[htbp]
-\caption{Coding Instructions}
-\label{tab:coding_instructions}
-\begin{center}
-\begin{tabular}{|p{0.98\textwidth}|}
-\hline
-\textbf{Coding Instructions} \\
-The reward function output should include: \\
-1. Total reward (float) \\
-2. Dictionary of individual reward components \\
-\\
-Format as a Python code string. Tips: \\
-1. Normalize rewards using transformations like np.exp \\
-2. Ensure input types match expected types \\
-3. Use only self attributes from environment class definition \\
-4. Initialize self variables with null checks \\
-5. No new input variables \\
-6. Include proper code formatting \\
-7. Pass self as first argument \\
-8. Do not compute fitness\_score components \\
-9. Create only the reward function \\
-10. Maintain smooth transitions \\
-\hline
-\end{tabular}
-\end{center}
-\end{table*}
+The policy architecture uses multilayer perceptron networks with two hidden layers of 64 units each. Learning rate starts at 3e-4 with linear decay scheduling throughout training. Each policy update processes batches of 64 samples with 10 optimization epochs, using a discount factor of 0.999 for long-term reward consideration and GAE lambda of 0.95 for advantage estimation.
 
-\begin{table*}[htbp]
-\caption{Task-Specific Components}
-\begin{center}
-\begin{tabular}{|p{0.98\textwidth}|}
-\hline
-\textbf{Task Description (BipedalWalker)} \\
-The goal is to make a biped navigate a 2D environment: \\
-- The biped starts standing at the left end of the terrain with the hull horizontal \\
-- The biped has to reach the right end and avoid falling down \\
-- Must keep moving forward, avoid getting stuck \\
-- Optimize for speed and minimal episode steps \\
-- Goal achievement prioritized over movement smoothness \\
-\hline
-\end{tabular}
-\end{center}
-\label{tab:task_components}
-\end{table*}
+Training progresses for 1,000,000 timesteps per iteration with evaluation checkpoints every 1,000 timesteps. Each evaluation uses 10 episodes to assess performance stability. Early stopping triggers when performance plateaus for 5 consecutive evaluations without improvement.
 
-The implementation details of the environment are provided in Table 5, which shows the core step function of the BipedalWalker environment. This function handles the physics simulation and state updates, providing the foundation for our reward engineering process.
+Resource management includes NVML-based GPU utilization monitoring with dynamic device selection based on memory availability and computational load. Memory management features automatic batch size adjustment according to available VRAM. The framework supports multi-environment parallel training with shared policy updates and distributed computing through Ray framework integration for multi-node scaling.
 
-Based on the environment implementation, we optionally develop an initial reward template as shown in Table 6. When used, this template serves as a starting point for our CoT-based reward function enhancement process, incorporating basic components such as progress tracking, energy efficiency, and stability measures.
+Data storage employs compressed trajectory formats for efficient analysis and replay capabilities. TensorBoard logging captures comprehensive training metrics, reward component tracking, and agent behavior statistics. Model checkpoints save at peak performance points and iteration boundaries, enabling detailed analysis of learning progression and reward function effectiveness throughout the optimization process.
 
-The environment implementation details are shown in Table 5, which presents the core step function of the BipedalWalker environment.
-
-\begin{longtable}{|p{\textwidth}|}
-\caption{Step Function Implementation of BipedalWalker}
-\label{tab:step_implementation} \\
-
-\hline
-\textbf{Step Function Implementation} \\
-\endfirsthead
-
-\multicolumn{1}{c}{\tablename\ \thetable{} -- continued from previous page} \\
-\hline
-\textbf{Step Function Implementation (continued)} \\
-\endhead
-
-\hline
-\multicolumn{1}{r}{\textit{Continued on next page}} \\
-\endfoot
-
-\hline
-\endlastfoot
-
-\begin{lstlisting}[language=Python, frame=none, aboveskip=0pt, belowskip=0pt, xleftmargin=1em]
-    def step(self, action: np.ndarray):
-        for i in range(4):
-            self.joints[i].motorSpeed = float(SPEED_HIP * np.sign(action[i]))
-            self.joints[i].maxMotorTorque = float(
-                MOTORS_TORQUE * np.clip(np.abs(action[i]), 0, 1)
-            )
-    
-        self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
-    
-        pos = self.hull.position
-        vel = self.hull.linearVelocity
-    
-        for i in range(10):
-            self.lidar[i].fraction = 1.0
-            self.lidar[i].p1 = pos
-            self.lidar[i].p2 = (
-                pos[0] + math.sin(1.5 * i / 10.0) * LIDAR_RANGE,
-                pos[1] - math.cos(1.5 * i / 10.0) * LIDAR_RANGE,
-            )
-            self.world.RayCast(self.lidar[i], self.lidar[i].p1, self.lidar[i].p2)
-    
-        state = [
-            self.hull.angle,
-            2.0 * self.hull.angularVelocity / FPS,
-            0.3 * vel.x * (VIEWPORT_W / SCALE) / FPS,
-            0.3 * vel.y * (VIEWPORT_H / SCALE) / FPS,
-        ]
-        state += [l.fraction for l in self.lidar]
-    
-        terminated = self.game_over or pos[0] < 0 or \
-                    pos[0] > (TERRAIN_LENGTH - TERRAIN_GRASS) * TERRAIN_STEP
-    
-        reward, individual_reward = self.compute_reward(pos, action, state, terminated)
-        fitness_score = self.compute_fitness_score(pos, action, state, terminated)
-        individual_reward.update({'fitness_score': fitness_score})
-    
-        return np.array(state, dtype=np.float32), reward, terminated, False, individual_reward
-    \end{lstlisting}
-\end{longtable}
-
-
-The reward function implementation generated by our approach is presented in Table 6, which can be used as a starting point for the reward function generation process.
-
-
-\begin{longtable}{|p{\textwidth}|}
-\caption{Reward Function Implementation for BipedalWalker}
-\label{tab:reward_implementation} \\
-
-\hline
-\textbf{Reward Function Implementation} \\
-\endfirsthead
-
-\multicolumn{1}{c}{\tablename\ \thetable{} -- continued from previous page} \\
-\hline
-\textbf{Reward Function Implementation (continued)} \\
-\hline
-\endhead
-
-\hline
-\multicolumn{1}{r}{\textit{Continued on next page}} \\
-\endfoot
-
-\hline
-\endlastfoot
-
-\begin{lstlisting}[language=Python, frame=none]
-def compute_reward(self, pos, action, state, terminated):
-    # Distance-based reward: reduced scale and increased precision
-    distance_reward = np.exp(pos.x / 2000.0) - 1
-
-    # Stability reward:
-    angle_penalty = np.tanh(np.abs(state[0]) / 0.01) * 0.05
-    angular_velocity_penalty = np.tanh(np.abs(state[1]) / 0.01) * 0.05
-
-    # Smoothness reward:
-    action_penalty = np.tanh(-np.sum(np.abs(action)) / len(action) / 10.0) * -0.2
-
-    # Obstacle avoidance penalty: reduced magnitude
-    obstacle_penalty = -np.min([l.fraction for l in self.lidar]) * 1
-
-    # Velocity penalty: increased magnitude
-    velocity_penalty = np.tanh(np.abs(state[2]) / 0.5) * -1.5
-
-    # Jump penalty: reduced magnitude
-    jump_penalty = np.tanh(-state[3] / 2.0) * 0.5
-
-    # Proximity to goal reward:
-    proximity_to_goal_reward = -np.exp(-(pos.x - TERRAIN_LENGTH) ** 2 / 50.0) * 1.5
-
-    # Total reward: adjusted weights and scales for improved balance
-    reward = (
-        distance_reward
-        + 0.3 * angle_penalty
-        + 0.4 * angular_velocity_penalty
-        - 0.6 * action_penalty
-        - 0.1 * obstacle_penalty
-        - 0.8 * velocity_penalty
-        - 0.25 * jump_penalty
-        + 2.0 * proximity_to_goal_reward
-    )
-
-    # Termination conditions remain the same
-
-    individual_reward = {
-        "distance_reward": distance_reward,
-        "angle_penalty": angle_penalty,
-        "angular_velocity_penalty": angular_velocity_penalty,
-        "action_penalty": action_penalty,
-        "obstacle_penalty": obstacle_penalty,
-        "velocity_penalty": velocity_penalty,
-        "jump_penalty": jump_penalty,
-        "proximity_to_goal_reward": proximity_to_goal_reward,
-    }
-
-    return reward, individual_reward
-
-\end{lstlisting}
-\end{longtable}
-
-\subsection{Stage 2: Initial CoT Generation (Iteration 0)}
-    \indent The second stage focuses on the initial Chain-of-Thought (CoT) generation process. Table 7 presents the detailed prompt template used in the first iteration (Iteration 0) of our reward engineering process. This systematic prompt guides the language model through a careful analysis of the task requirements and constraints before implementing the actual reward function.
-
-
-\begin{table*}[htbp]
-\caption{Initial CoT Generation Prompt (Iteration 0)}
-\begin{center}
-\begin{tabular}{|p{\textwidth}|}
-\hline
-\begin{verbatim}
-Before implementing the reward function, please follow these steps:
-
-1. First, analyze the task description and environment code carefully:
-   - What is the main goal?
-   - What are the key state variables?
-   - What are the constraints?
-
-2. Identify the key objectives and constraints:
-   - Primary objectives
-   - Secondary objectives
-   - Physical constraints
-   - Action constraints
-
-3. Break down how different actions should be rewarded:
-   - What behaviors should be encouraged?
-   - What behaviors should be discouraged?
-   - How to balance exploration vs exploitation?
-
-4. Consider potential edge cases:
-   - Boundary conditions
-   - Extreme scenarios
-   - Potential exploitation of the reward
-
-5. Design your reward components:
-   - Base reward components
-   - Shaping rewards
-   - Normalization approach
-
-Format your response as follows:
-1. Start with "Reasoning:" followed by your detailed analysis of each step above
-2. Then provide your code implementation in a Python code block (```python ... ```)
-\end{verbatim} \\
-\hline
-\end{tabular}
-\end{center}
-\label{tab:cot_generation}
-\end{table*}
-
-
-The initial Chain-of-Thought (CoT) generation process follows a structured approach to reward function design. Table 7 presents the detailed prompt template used in the first iteration (Iteration 0) of our reward engineering process. This systematic prompt guides the language model through a careful analysis of the task requirements and constraints before implementing the actual reward function.
-
-\subsection*{Stage 3: Iterative Refinement (Iterations 1 to n)}
-The final stage implements an iterative refinement process using three key components shown in Tables 8, 9, and 10:
-
-1. Performance Analysis Prompt (Table 8): Evaluates the previous iteration's performance through training metrics, fitness scores, and behavioral patterns. This prompt helps identify strengths and weaknesses in the current reward function.
-
-2. CoT Reflection Prompt (Table 9): Builds upon the performance analysis to guide structured thinking about potential improvements. This prompt maintains consistency with the initial CoT approach while incorporating learned insights.
-
-3. Reflection Instructions Prompt (Table 10): Provides specific guidelines for analyzing reward components and their effectiveness. This prompt focuses on practical aspects such as scaling, component relevance, and fitness score optimization.
-
-This iterative process continues until the desired performance is achieved or the maximum number of iterations is reached. Each iteration builds upon the insights gained from previous rounds, incorporating feedback and performance metrics to guide the optimization process.
-
-
-\begin{table*}[htbp]
-    \caption{Performance Analysis Prompt}
-    \label{tab:performance_analysis}
-    \begin{center}
-    \begin{tabular}{|p{\textwidth}|}
-    \hline
-    \begin{verbatim}
-    Previous Iteration Performance Analysis:
-
-    1. Training Metrics:
-    {training_metrics}
-    
-    2. Current Best Reward Function:
-    {best_reward_code}
-    
-    3. Performance Statistics:
-    - Maximum achieved fitness: {max_fitness}
-    - Average episode length: {avg_episode_length}
-    - Learning stability: {learning_stability}
-    - Success rate: {success_rate}
-    
-    4. Key Observations:
-    - Learning curve characteristics
-    - Agent behavior patterns
-    - Critical events or milestones
-    - Potential issues or limitations
-    
-    Please analyze this information using the Chain of Thought process to design 
-    an improved reward function.
-    \end{verbatim} \\
-    \hline
-    \end{tabular}
-    \end{center}
-    \end{table*}
-
-    \begin{table*}[htbp]
-        \caption{CoT Reflection Prompt}
-        \label{tab:cot_reflection}
-        \begin{center}
-        \begin{tabular}{|p{\textwidth}|}
-        \hline
-        \begin{verbatim}
-    Before implementing the reward function, please follow these steps:
-
-    1. First, analyze the task description and environment code carefully:
-        - What is the main goal?
-        - What are the key state variables?
-        - What are the constraints?
-    
-    2. Identify the key objectives and constraints:
-        - Primary objectives
-        - Secondary objectives
-        - Physical constraints
-        - Action constraints
-    
-    3. Break down how different actions should be rewarded:
-        - What behaviors should be encouraged?
-        - What behaviors should be discouraged?
-        - How to balance exploration vs exploitation?
-    
-    4. Consider potential edge cases:
-        - Boundary conditions
-        - Extreme scenarios
-        - Potential exploitation of the reward
-    
-    5. Design your reward components:
-        - Base reward components
-        - Shaping rewards
-        - Normalization approach
-    
-    Format your response as follows:
-    1. Start with "Reasoning:" followed by your detailed analysis of each step above
-    2. Then provide your code implementation in a Python code block (```python ... ```)        
-        \end{verbatim} \\
-        \hline
-        \end{tabular}
-        \end{center}
-        \end{table*}
-
-        \begin{table*}[htbp]
-            \caption{Reflection Instructions Prompt}
-            \label{tab:reflection_instructions}
-            \begin{center}
-            \begin{tabular}{|p{\textwidth}|}
-            \hline
-            \begin{verbatim}
-Please analyze the policy feedback and provide an improved reward function 
-to better solve the task. 
-Tips for analyzing feedback:
-1. If a reward component's values are nearly identical, or it increases when 
-it should decrease (minimize) and vice versa, consider the following options:
-    a. Change its scale or temperature parameter.
-    b. Re-write the component.
-    c. Discard the component.
-2. If a component's magnitude is significantly larger, re-scale it.
-3. You want to maximize the fitness score as it is the ground truth evaluator.
-4. You want to maximize positive reward components values during training and 
-minimize negative reward components values.
-5. If the fitness score is not improving during training, try to change the reward 
-function.
-Analyze each existing reward component first, then write the new reward function
-code proposal.  
-            \end{verbatim} \\
-            \hline
-            \end{tabular}
-            \end{center}
-            \end{table*}
-
-This iterative process continues until the desired performance is achieved or the maximum number of iterations is reached. Each iteration builds upon the insights gained from previous rounds, incorporating feedback and performance metrics to guide the optimization process.
-
-\section{Examples of CoT-based Reward Generation and Reflection}
-This section presents concrete examples of how the Chain-of-Thought (CoT) approach is applied in practice for reward function engineering. We showcase two key aspects: the initial reward generation process and subsequent reflection-based refinement.
-
-The first example demonstrates how the CoT approach guides the initial generation of a reward function. It shows both the analytical reasoning process and the resulting implementation for iteration 0 of the reward engineering process.
-
-\begin{table*}[htbp]
-    \caption{Analysis from llm with CoT in Iteration 0}
-    \label{tab:Analysis_CoT_0}
-    \begin{center}
-    \begin{tabular}{|p{\textwidth}|}
-    \hline
-    \begin{verbatim}
-        Analysis:
-
-Breaking down the task description and environment code reveals that the primary 
-objective is to make the biped navigate from the left end of the terrain to the 
-right end while avoiding obstacles, falling down, or getting stuck.
-
-Key state variables include the biped's position (x, y), velocity (vx, vy), and 
-motor speeds for each joint. The constraints are:
-
-* Physical: the biped must not fall down, get stuck, or exceed the terrain boundaries.
-* Action: the agent can control the motor speeds of each joint.
-
-Primary objectives:
-
-* Reach the right end of the terrain
-* Avoid falling down, getting stuck, or exceeding 
-the terrain boundaries
-
-Secondary objectives:
-
-* Move forward as much as possible
-* Go as fast as possible (minimize episode steps)
-
-Reward components:
-
-1. **Reach reward**: encourage reaching the right end of the terrain.
-2. **Avoidance reward**: penalize falling down, getting stuck, or exceeding 
-the terrain boundaries.
-3. **Forward movement reward**: encourage moving forward.
-4. **Speed reward**: incentivize fast movement.
-
-Normalization approach:
-
-* Use np.exp to normalize rewards and ensure they are always positive.
-
-
-    \end{verbatim} \\
-    \hline
-    \end{tabular}
-    \end{center}
-    \end{table*}
-
-    \begin{table*}[htbp]
-    \caption{Code from llm with CoT in Iteration 0}
-    \label{tab:Code_CoT_0}
-    \begin{center}
-    \begin{tabular}{|p{\textwidth}|}
-    \hline
-    \begin{verbatim}
-def compute_reward(self, pos, action, state, terminated):
-    reach_reward = 0
-    avoidance_reward = 0
-    forward_movement_reward = 0
-    speed_reward = 0
-
-    # Reward reaching the right end of the terrain
-    if pos[0] > (TERRAIN_LENGTH - TERRAIN_GRASS) * TERRAIN_STEP:
-        reach_reward = 10.0
-
-    # Penalize falling down, getting stuck, or exceeding the terrain boundaries
-    if terminated:
-        avoidance_reward = -5.0
-
-    # Encourage moving forward
-    forward_movement_reward = state[2]  # vx component of velocity
-
-    # Incentivize fast movement
-    speed_reward = np.exp(state[3])  # vy component of velocity 
-    # (positive reward for high speed)
-
-    individual_reward = {
-        'reach': reach_reward,
-        'avoidance': avoidance_reward,
-        'forward_movement': forward_movement_reward,
-        'speed': speed_reward
-    }
-
-    reward = reach_reward + avoidance_reward + forward_movement_reward + speed_reward
-
-    return reward, individual_reward
-    \end{verbatim} \\
-    \hline
-    \end{tabular}
-    \end{center}
-    \end{table*}
-
-The second example illustrates how the CoT approach facilitates reflection on reward function performance. It includes detailed performance metrics, analysis of reward components, and subsequent refinements based on observed behavior.
-
-\begin{table*}[htbp]
-    \caption{Reflection of Components in Iteration 1}
-    \label{tab:Analysis_CoT_01}
-    \begin{center}
-    \begin{tabular}{|p{\textwidth}|}
-    \hline
-    \begin{verbatim}
-Performance Analysis:
-   reach: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0].
-    Max: 0.0 - Mean: 0.0 - Min: 0.0 
-   forward_movement: [38.14766542628862, 100.18565675155529, 82.92425245350518, 
-   225.32142357140503, 728.2149681850315, 61.379876609731, 69.62986257168465, 
-   97.01515441786847, 62.27421109898911, 886.024284332291]. 
-   Max: 886.024284332291 - Mean: 235.11173554183497 - Min: 38.14766542628862 
-   speed: [nan, nan, 74.75, 345.75, 800.0, 44.9375, 50.125, 63.0625, 47.875, 477.75]. 
-   Max: nan - Mean: nan - Min: nan 
-   avoidance: [0.0, -0.1875, -0.5, -0.3125, 0.0, -0.5, -0.5, -0.5, -0.5, -0.375]. 
-   Max: 0.0 - Mean: -0.3375 - Min: -0.5 
-   feature: [52.5, 25.0, 17.5, 123.75, 727.5, 40.0, 40.0, 40.0, 71.25, 655.0]. 
-   Max: 727.5 - Mean: 179.25 - Min: 17.5 
-   fitness_score: [-9.752663325726997, -44.71357389366377, -89.69247023539725, 
-   -45.75511213654681, 100.08154316943032, -94.92986408164555, -95.32390355962065,
-   -91.24470863744043, -97.31017249609376, 77.49146458473439]. 
-   Max: 100.08154316943032 - Mean: -39.114946061197045 - Min: -97.31017249609376 
-   reward: [nan, nan, 174.67425264045596, 694.5089239552617, 2255.714967980981, 
-   145.81737657636404, 159.2548627257347, 199.57765482366085, 180.89921092242002, 
-   2018.3992846086621]. Max: nan - Mean: nan - Min: nan 
-   episode_length: [1600.0, 1100.25, 149.5, 691.5, 1600.0, 89.875, 100.25, 126.125, 
-   95.75, 955.5].
-    Max: 1600.0 - Mean: 650.875 - Min: 89.875 
-
-Best Performing Reward Function:
-    # Generated code 
-    def compute_reward(self, pos, action, state, terminated):
-        reach_reward = 10 if np.linalg.norm(pos) < 5 else 0
-        forward_movement_reward = 3 * np.abs(state[2])
-        speed_reward = 0.5 * (np.exp(state[3]) - 1) / (np.max(np.exp(state[3])) - 1)
-        exploration_reward = 1 if state[4] > 20 else 0
-        avoidance_reward = -0.5 if terminated else 0
-        feature_reward = 10 if state[5] == 1 else 0
-        point_reward = 5 if state[6] == 2 else 0
-        individual_reward = {
-            'reach': reach_reward,
-            'forward_movement': forward_movement_reward,
-            'speed': speed_reward,
-            'exploration': exploration_reward,
-            'avoidance': avoidance_reward,
-            'feature': feature_reward,
-            'point': point_reward
-        }
-        reward = reach_reward + forward_movement_reward + speed_reward + exploration_reward 
-        + avoidance_reward + feature_reward + point_reward
-        return reward, individual_reward
-    \end{verbatim} \\
-    \hline
-    \end{tabular}
-    \end{center}
-    \end{table*}
-
-
-\begin{table*}[htbp]
-    \caption{Analysis from llm with CoT in Iteration 1}
-    \label{tab:Analysis_CoT_1}
-    \begin{center}
-    \begin{tabular}{|p{\textwidth}|}
-    \hline
-    \begin{verbatim}
-Analysis:
-
-**Performance Analysis**
-
-The learning curve trend is positive, indicating that the agent is improving over time. 
-However, the average fitness score of -39.114946061197045 suggests that the agent is not 
-consistently achieving good results. The maximum fitness score of 100.08154316943032 
-indicates that there are instances where the agent performs well, but it's unclear what 
-triggers these successful behaviors.
-
-**Reward Function Analysis**
-
-* `reach_reward`: Encourages the agent to reach a certain position within a threshold 
-(5 units). This might be effective in guiding the agent towards the goal.
-* `forward_movement_reward`, `speed_reward`, and `exploration_reward`: These rewards 
-are designed to encourage the agent to move forward, increase its speed, or explore 
-the environment. However, these components might not provide enough motivation for 
-the agent to perform complex behaviors.
-* `avoidance_reward`: This reward discourages termination of the episode, but it's 
-unclear how effective it is in preventing premature termination.
-
-The reward scales seem to be relatively high, which could lead to unstable learning 
-or overfitting. The `point_reward` and `feature_reward` components have a binary value 
-(0 or 1), which might not provide enough nuance for the agent to learn complex behaviors.
-
-**Behavioral Analysis**
-
-Based on the provided information, it's unclear what strategies the agent has learned. 
-However, the presence of multiple reward components suggests that the agent is learning 
-to navigate the environment and interact with different features and points.
-The learning trend indicates that the agent is improving over time, but there are instances 
-where it performs poorly (average fitness score). This might suggest that the agent is not 
-consistently learning effective strategies or is prone to overfitting.
-
-**Improvement Planning**
-
-1. **Reduce reward scales**: Decrease the magnitude of the rewards to avoid unstable 
-learning and overfitting.
-2. **Make reward components more nuanced**: Replace binary rewards with continuous 
-values to encourage more complex behaviors.
-3. **Improve exploration**: Increase the `exploration_reward` or introduce new 
-components that promote exploration, such as a penalty for stagnation or a bonus 
-for discovering new features.
-4. **Tune the avoidance reward**: Adjust the `avoidance_reward` to prevent premature 
-termination while still encouraging the agent to explore and interact with the environment.
-
-    \end{verbatim} \\
-    \hline
-    \end{tabular}
-    \end{center}
-    \end{table*}
-
-    \begin{table*}[htbp]
-    \caption{Code from llm with CoT in Iteration 1}
-    \label{tab:Code_CoT_1}
-    \begin{center}
-    \begin{tabular}{|p{\textwidth}|}
-    \hline
-    \begin{verbatim}
-def compute_reward(self, pos, action, state, terminated):
-    reach_reward = 0.5 if np.linalg.norm(pos) < 2 else 0
-    forward_movement_reward = 1 * np.abs(state[2])
-    speed_reward = 0.25 * (np.exp(state[3]) - 1) / (np.max(np.exp(state[3])) - 1)
-    
-    exploration_reward = 0.5 if state[4] > 10 else 0
-    avoidance_reward = -0.25 if terminated else 0
-    
-    feature_reward = 2 if state[5] == 1 else 0
-    point_reward = 1 if state[6] == 2 else 0
-    
-    individual_reward = {
-        'reach': reach_reward,
-        'forward_movement': forward_movement_reward,
-        'speed': speed_reward,
-        'exploration': exploration_reward,
-        'avoidance': avoidance_reward,
-        'feature': feature_reward,
-        'point': point_reward
-    }
-    
-    reward = reach_reward + forward_movement_reward + speed_reward 
-    + exploration_reward + avoidance_reward + feature_reward + point_reward
-    
-    return reward, individual_reward
-    \end{verbatim} \\
-    \hline
-    \end{tabular}
-    \end{center}
-    \end{table*}
 \end{document}
